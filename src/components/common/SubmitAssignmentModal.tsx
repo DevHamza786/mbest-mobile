@@ -1,0 +1,268 @@
+/**
+ * SubmitAssignmentModal - Modal for submitting assignments
+ */
+
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
+import { Modal } from './Modal';
+import { Button } from './Button';
+import { Icon } from './Icon';
+import { LoadingSpinner } from './LoadingSpinner';
+import { studentService } from '../../services/api/student';
+import { useAuthStore } from '../../store/authStore';
+import { colors } from '../../constants/colors';
+import { spacing, borderRadius, shadows } from '../../constants/spacing';
+import { textStyles } from '../../constants/typography';
+
+interface Assignment {
+  id: number;
+  title: string;
+  description?: string;
+  due_date: string;
+  max_points?: number;
+  subject?: string;
+  class?: string;
+  tutor_name?: string;
+  instructor?: string;
+}
+
+interface SubmitAssignmentModalProps {
+  visible: boolean;
+  onClose: () => void;
+  assignmentId: number | null;
+  assignment?: Assignment | null;
+  onSubmit: (submissionText: string) => void;
+}
+
+export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
+  visible,
+  onClose,
+  assignmentId,
+  assignment: assignmentProp,
+  onSubmit,
+}) => {
+  const [submissionText, setSubmissionText] = useState('');
+  const { token } = useAuthStore();
+
+  // Fetch assignment details if assignmentId is provided
+  const { data: assignmentData, isLoading } = useQuery({
+    queryKey: ['assignmentDetails', assignmentId],
+    queryFn: () => studentService.getAssignmentDetails(assignmentId!),
+    enabled: !!token && !!assignmentId && visible && !assignmentProp,
+  });
+
+  const assignment = assignmentProp || assignmentData?.data || assignmentData;
+
+  if (isLoading && !assignmentProp) {
+    return (
+      <Modal visible={visible} onClose={onClose} title="Submit Assignment">
+        <View style={styles.loadingContainer}>
+          <LoadingSpinner />
+        </View>
+      </Modal>
+    );
+  }
+
+  if (!assignment || !assignment.due_date) {
+    return (
+      <Modal visible={visible} onClose={onClose} title="Submit Assignment">
+        <View style={styles.errorContainer}>
+          <Icon name="alert-circle" size={64} color={colors.error} />
+          <Text style={styles.errorText}>Assignment not found</Text>
+          <Button title="Close" onPress={onClose} variant="outline" style={styles.closeButton} />
+        </View>
+      </Modal>
+    );
+  }
+
+  const dueDate = new Date(assignment.due_date);
+  const now = new Date();
+  const isOverdue = dueDate < now;
+  const daysOverdue = isOverdue
+    ? Math.ceil((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
+    : 0;
+
+  const handleSubmit = () => {
+    if (submissionText.trim()) {
+      onSubmit(submissionText);
+      setSubmissionText('');
+    }
+  };
+
+  return (
+    <Modal visible={visible} onClose={onClose} title="Submit Assignment">
+      {/* Assignment Info Card */}
+      <View style={styles.infoCard}>
+        <Text style={styles.assignmentTitle}>{assignment.title}</Text>
+        {assignment.description && (
+          <Text style={styles.assignmentDescription}>{assignment.description}</Text>
+        )}
+        <View style={styles.detailsRow}>
+          <Text style={styles.detailText}>
+            Due: {dueDate.toLocaleDateString('en-US', { 
+              month: '2-digit', 
+              day: '2-digit', 
+              year: 'numeric' 
+            })}
+          </Text>
+          {(assignment.max_points || (assignment as any).max_points) && (
+            <Text style={styles.detailText}>Points: {assignment.max_points || (assignment as any).max_points}</Text>
+          )}
+        </View>
+        {isOverdue && (
+          <View style={styles.warningBox}>
+            <Icon name="alert-circle" size={20} color={colors.warning} />
+            <Text style={styles.warningText}>
+              This assignment is {daysOverdue} {daysOverdue === 1 ? 'day' : 'days'} overdue. You can still submit, but it may be marked as late.
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* Submission Text Area */}
+      <View style={styles.textAreaContainer}>
+        <Text style={styles.label}>Submission Text</Text>
+        <TextInput
+          style={styles.textArea}
+          placeholder="Enter your assignment submission here..."
+          placeholderTextColor={colors.textTertiary}
+          multiline
+          numberOfLines={8}
+          value={submissionText}
+          onChangeText={setSubmissionText}
+          textAlignVertical="top"
+        />
+      </View>
+
+      {/* Action Buttons */}
+      <View style={styles.actions}>
+        <Button
+          title="Cancel"
+          onPress={onClose}
+          variant="outline"
+          style={styles.cancelButton}
+        />
+        <Button
+          title="Submit Assignment"
+          onPress={handleSubmit}
+          variant="primary"
+          style={styles.submitButton}
+          disabled={!submissionText.trim()}
+        />
+      </View>
+    </Modal>
+  );
+};
+
+const styles = StyleSheet.create({
+  infoCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  assignmentTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: spacing.sm,
+    includeFontPadding: false,
+    lineHeight: 24,
+  },
+  assignmentDescription: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: colors.text,
+    marginBottom: spacing.md,
+    lineHeight: 20,
+    includeFontPadding: false,
+  },
+  detailsRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  detailText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.textSecondary,
+    includeFontPadding: false,
+  },
+  warningBox: {
+    flexDirection: 'row',
+    backgroundColor: colors.warningLight + '30',
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.warningLight,
+  },
+  warningText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.text,
+    lineHeight: 18,
+    includeFontPadding: false,
+  },
+  textAreaContainer: {
+    marginBottom: spacing.lg,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: spacing.sm,
+    includeFontPadding: false,
+  },
+  textArea: {
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    fontSize: 14,
+    color: colors.text,
+    minHeight: 150,
+    backgroundColor: colors.background,
+    ...shadows.sm,
+  },
+  actions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.md,
+    marginTop: spacing.md,
+  },
+  cancelButton: {
+    flex: 1,
+  },
+  submitButton: {
+    flex: 1,
+  },
+  loadingContainer: {
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 200,
+  },
+  errorContainer: {
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.error,
+    marginTop: spacing.lg,
+    marginBottom: spacing.lg,
+    textAlign: 'center',
+    includeFontPadding: false,
+  },
+  closeButton: {
+    minWidth: 100,
+  },
+});
+
