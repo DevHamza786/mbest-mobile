@@ -13,6 +13,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../constants/colors';
@@ -25,6 +26,7 @@ interface ModalProps {
   title: string;
   children: React.ReactNode;
   showCloseButton?: boolean;
+  /** Max height in pixels. When undefined, uses 90% of screen height. */
   maxHeight?: number;
 }
 
@@ -37,26 +39,43 @@ export const Modal: React.FC<ModalProps> = ({
   maxHeight,
 }) => {
   const insets = useSafeAreaInsets();
+  const { height: screenHeight } = Dimensions.get('window');
+
+  const modalHeight =
+    maxHeight != null ? maxHeight : Math.floor(screenHeight * 0.40);
+
+  const safeBottomPadding = typeof insets.bottom === 'number' ? insets.bottom : 0;
+
+  if (!visible) {
+    return null;
+  }
 
   return (
     <RNModal
       visible={visible}
-      transparent
+      transparent={true}
       animationType="slide"
       onRequestClose={onClose}
+      statusBarTranslucent={true}
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.overlay}>
-          <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+      <View style={styles.overlay}>
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={styles.backdrop} />
+        </TouchableWithoutFeedback>
+        <View style={styles.modalWrapper}>
+          <TouchableWithoutFeedback>
             <KeyboardAvoidingView
               behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
               style={styles.keyboardView}
+              keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
             >
               <View
                 style={[
                   styles.modalContainer,
-                  { maxHeight: maxHeight || '90%' },
-                  { paddingBottom: Math.max(insets.bottom, spacing.md) },
+                  { 
+                    height: modalHeight, 
+                    paddingBottom: Math.max(safeBottomPadding, spacing.md) 
+                  },
                 ]}
               >
                 {/* Header */}
@@ -73,7 +92,7 @@ export const Modal: React.FC<ModalProps> = ({
                   )}
                 </View>
 
-                {/* Content */}
+                {/* Content - minHeight: 0 allows ScrollView to shrink when parent is constrained */}
                 <ScrollView
                   style={styles.content}
                   contentContainerStyle={styles.contentContainer}
@@ -85,7 +104,7 @@ export const Modal: React.FC<ModalProps> = ({
             </KeyboardAvoidingView>
           </TouchableWithoutFeedback>
         </View>
-      </TouchableWithoutFeedback>
+      </View>
     </RNModal>
   );
 };
@@ -96,6 +115,19 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  modalWrapper: {
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   keyboardView: {
     width: '100%',
@@ -109,33 +141,35 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xl,
     ...shadows.lg,
     overflow: 'hidden',
+    maxHeight: '90%',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
   },
   title: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: colors.text,
     flex: 1,
     includeFontPadding: false,
-    lineHeight: 28,
   },
   closeButton: {
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: borderRadius.full,
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.borderLight,
   },
   content: {
     flex: 1,
+    minHeight: 0,
   },
   contentContainer: {
     padding: spacing.lg,

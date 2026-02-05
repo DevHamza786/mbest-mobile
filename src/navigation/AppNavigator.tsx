@@ -12,6 +12,7 @@ import { useAuthStore } from '../store/authStore';
 import { colors } from '../constants/colors';
 import { spacing } from '../constants/spacing';
 import { Icon } from '../components/common/Icon';
+import { ProfileHeaderButton } from '../components/common/ProfileHeaderButton';
 
 // Screens
 import { SplashScreen } from '../screens/auth/SplashScreen';
@@ -41,13 +42,15 @@ import { ParentAssignmentsScreen } from '../screens/parent/ParentAssignmentsScre
 import { ParentGradesScreen } from '../screens/parent/ParentGradesScreen';
 import { ParentAttendanceScreen } from '../screens/parent/ParentAttendanceScreen';
 import { ParentBillingScreen } from '../screens/parent/ParentBillingScreen';
+import { AddStudentScreen } from '../screens/parent/AddStudentScreen';
 
 // Common Screens
 import { MessagesScreen } from '../screens/common/MessagesScreen';
 import { ProfileScreen } from '../screens/common/ProfileScreen';
 import { SettingsScreen } from '../screens/common/SettingsScreen';
+import { ParentGate } from '../components/ParentGate';
 
-import type { RootStackParamList, AuthStackParamList, TutorTabParamList, StudentTabParamList, StudentStackParamList, ParentTabParamList } from '../types/navigation';
+import type { RootStackParamList, AuthStackParamList, TutorTabParamList, StudentTabParamList, StudentStackParamList, ParentTabParamList, ParentStackParamList } from '../types/navigation';
 
 const RootStack = createStackNavigator<RootStackParamList>();
 const AuthStack = createStackNavigator<AuthStackParamList>();
@@ -55,6 +58,7 @@ const TutorTab = createBottomTabNavigator<TutorTabParamList>();
 const StudentTab = createBottomTabNavigator<StudentTabParamList>();
 const StudentStack = createStackNavigator<StudentStackParamList>();
 const ParentTab = createBottomTabNavigator<ParentTabParamList>();
+const ParentStack = createStackNavigator<ParentStackParamList>();
 
 // Auth Stack Navigator
 const AuthNavigator = () => {
@@ -92,6 +96,7 @@ const TutorNavigator = () => {
           includeFontPadding: false,
           lineHeight: 26,
         },
+        headerRight: () => <ProfileHeaderButton />,
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopWidth: 1,
@@ -117,11 +122,50 @@ const TutorNavigator = () => {
         },
       }}
     >
-      <TutorTab.Screen name="TutorDashboard" component={TutorDashboardScreen} options={{ title: 'Dashboard', tabBarLabel: 'Home' }} />
-      <TutorTab.Screen name="TutorCalendar" component={TutorCalendarScreen} options={{ title: 'Calendar', tabBarLabel: 'Calendar' }} />
-      <TutorTab.Screen name="TutorStudents" component={TutorStudentsScreen} options={{ title: 'Students', tabBarLabel: 'Students' }} />
-      <TutorTab.Screen name="TutorAssignments" component={TutorAssignmentsScreen} options={{ title: 'Assignments', tabBarLabel: 'Assignments' }} />
-      <TutorTab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile', tabBarLabel: 'Profile' }} />
+      <TutorTab.Screen 
+        name="TutorDashboard" 
+        component={TutorDashboardScreen} 
+        options={{ 
+          title: 'Dashboard', 
+          tabBarLabel: 'Home',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="home" size={size || 22} color={color} />
+          ),
+        }} 
+      />
+      <TutorTab.Screen 
+        name="TutorCalendar" 
+        component={TutorCalendarScreen} 
+        options={{ 
+          title: 'Calendar', 
+          tabBarLabel: 'Calendar',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="calendar" size={size || 20} color={color} />
+          ),
+        }} 
+      />
+      <TutorTab.Screen 
+        name="TutorStudents" 
+        component={TutorStudentsScreen} 
+        options={{ 
+          title: 'Students', 
+          tabBarLabel: 'Students',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="users" size={size || 20} color={color} />
+          ),
+        }} 
+      />
+      <TutorTab.Screen 
+        name="TutorAssignments" 
+        component={TutorAssignmentsScreen} 
+        options={{ 
+          title: 'Assignments', 
+          tabBarLabel: 'Assignments',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="file-text" size={size || 20} color={color} />
+          ),
+        }} 
+      />
     </TutorTab.Navigator>
   );
 };
@@ -217,18 +261,6 @@ const StudentTabsNavigator = () => {
           ),
         }} 
       />
-      {/* Profile tab commented out as per requirement */}
-      {/* <StudentTab.Screen 
-        name="Profile" 
-        component={ProfileScreen} 
-        options={{ 
-          title: 'Profile', 
-          tabBarLabel: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="user" size={size || 20} color={color} />
-          ),
-        }} 
-      /> */}
     </StudentTab.Navigator>
   );
 };
@@ -290,8 +322,8 @@ const StudentNavigator = () => {
   );
 };
 
-// Parent Tab Navigator
-const ParentNavigator = () => {
+// Parent Tab Navigator (used inside ParentStack)
+const ParentTabsNavigator = () => {
   const insets = useSafeAreaInsets();
   const safeBottomPadding = Math.max(insets.bottom, Platform.OS === 'ios' ? spacing.sm : spacing.xs);
   const baseHeight = Platform.OS === 'ios' ? 60 : 64;
@@ -315,6 +347,7 @@ const ParentNavigator = () => {
           includeFontPadding: false,
           lineHeight: 26,
         },
+        headerRight: () => <ProfileHeaderButton />,
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopWidth: 1,
@@ -340,13 +373,93 @@ const ParentNavigator = () => {
         },
       }}
     >
-      <ParentTab.Screen name="ParentDashboard" component={ParentDashboardScreen} options={{ title: 'Dashboard', tabBarLabel: 'Home' }} />
-      <ParentTab.Screen name="ParentClasses" component={ParentClassesScreen} options={{ title: 'Classes', tabBarLabel: 'Classes' }} />
-      <ParentTab.Screen name="ParentAssignments" component={ParentAssignmentsScreen} options={{ title: 'Assignments', tabBarLabel: 'Assignments' }} />
-      <ParentTab.Screen name="ParentGrades" component={ParentGradesScreen} options={{ title: 'Grades', tabBarLabel: 'Grades' }} />
-      <ParentTab.Screen name="ParentBilling" component={ParentBillingScreen} options={{ title: 'Billing', tabBarLabel: 'Billing' }} />
-      <ParentTab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile', tabBarLabel: 'Profile' }} />
+      <ParentTab.Screen 
+        name="ParentDashboard" 
+        component={ParentDashboardScreen} 
+        options={{ 
+          title: 'Parent Dashboard', 
+          tabBarLabel: 'Home',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="home" size={size || 22} color={color} />
+          ),
+        }} 
+      />
+      <ParentTab.Screen 
+        name="ParentClasses" 
+        component={ParentClassesScreen} 
+        options={{ 
+          title: 'Classes', 
+          tabBarLabel: 'Classes',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="book" size={size || 20} color={color} />
+          ),
+        }} 
+      />
+      <ParentTab.Screen 
+        name="ParentAssignments" 
+        component={ParentAssignmentsScreen} 
+        options={{ 
+          title: 'Assignments', 
+          tabBarLabel: 'Assignments',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="file-text" size={size || 20} color={color} />
+          ),
+        }} 
+      />
+      <ParentTab.Screen 
+        name="ParentGrades" 
+        component={ParentGradesScreen} 
+        options={{ 
+          title: 'Grades', 
+          tabBarLabel: 'Grades',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="star" size={size || 20} color={color} />
+          ),
+        }} 
+      />
+      <ParentTab.Screen 
+        name="ParentAttendance" 
+        component={ParentAttendanceScreen} 
+        options={{ 
+          title: 'Attendance Tracking', 
+          tabBarLabel: 'Attendance',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="activity" size={size || 20} color={color} />
+          ),
+        }} 
+      />
+      <ParentTab.Screen 
+        name="ParentBilling" 
+        component={ParentBillingScreen} 
+        options={{ 
+          title: 'Billing', 
+          tabBarLabel: 'Billing',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="credit-card" size={size || 20} color={color} />
+          ),
+        }} 
+      />
     </ParentTab.Navigator>
+  );
+};
+
+// Parent Stack Navigator (wraps tabs and includes detail screens)
+const ParentNavigator = () => {
+  return (
+    <ParentStack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <ParentStack.Screen name="ParentTabs" component={ParentTabsNavigator} />
+      <ParentStack.Screen
+        name="AddStudent"
+        component={AddStudentScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
+    </ParentStack.Navigator>
   );
 };
 
@@ -368,12 +481,17 @@ const AppNavigator = () => {
     }
   }, [loadAuth]);
 
+  // Force re-render when authentication state changes
+  useEffect(() => {
+    // This ensures the NavigationContainer updates when auth state changes
+  }, [isAuthenticated]);
+
   if (isLoading) {
     return <SplashScreen />;
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer key={isAuthenticated ? 'authenticated' : 'unauthenticated'}>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
         {!isAuthenticated ? (
           <RootStack.Screen name="Auth" component={AuthNavigator} />
@@ -381,27 +499,12 @@ const AppNavigator = () => {
           <>
             {user?.role === 'tutor' && <RootStack.Screen name="Tutor" component={TutorNavigator} />}
             {user?.role === 'student' && <RootStack.Screen name="Student" component={StudentNavigator} />}
-            {user?.role === 'parent' && <RootStack.Screen name="Parent" component={ParentNavigator} />}
+            {user?.role === 'parent' && <RootStack.Screen name="Parent" component={ParentGate} />}
             <RootStack.Screen 
               name="Profile" 
               component={ProfileScreen}
               options={{
-                headerShown: true,
-                headerStyle: {
-                  backgroundColor: colors.primary,
-                  elevation: 0,
-                  shadowOpacity: 0,
-                  borderBottomWidth: 0,
-                },
-                headerTintColor: colors.textInverse,
-                headerTitleStyle: {
-                  fontWeight: '700',
-                  fontSize: 20,
-                  letterSpacing: 0.5,
-                  includeFontPadding: false,
-                  lineHeight: 26,
-                },
-                title: 'Profile',
+                headerShown: false,
               }}
             />
           </>
@@ -411,5 +514,5 @@ const AppNavigator = () => {
   );
 };
 
-export { AppNavigator };
+export { AppNavigator, ParentNavigator };
 export default AppNavigator;

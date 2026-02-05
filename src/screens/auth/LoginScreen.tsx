@@ -52,6 +52,16 @@ export const LoginScreen: React.FC = () => {
         const token = response.data.token;
         
         if (user && token) {
+          // Admin cannot login on mobile app - web only
+          if (user.role === 'admin') {
+            Alert.alert(
+              'Access Restricted',
+              'Admin accounts cannot be used on the mobile app. Please use the web portal instead.'
+            );
+            return;
+          }
+          
+          // Student, tutor, and parent can login
           login(user, token);
           // Navigation will be handled automatically by AppNavigator based on user role
           return;

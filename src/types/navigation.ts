@@ -6,7 +6,8 @@ export type RootStackParamList = {
   Auth: NavigatorScreenParams<AuthStackParamList>;
   Tutor: NavigatorScreenParams<TutorTabParamList>;
   Student: NavigatorScreenParams<StudentStackParamList>;
-  Parent: NavigatorScreenParams<ParentTabParamList>;
+  Parent: NavigatorScreenParams<ParentStackParamList>;
+  Subscription: NavigatorScreenParams<SubscriptionStackParamList>;
   Profile: undefined; // Profile accessible from Header but not in bottom tabs
 };
 
@@ -21,7 +22,6 @@ export type TutorTabParamList = {
   TutorCalendar: undefined;
   TutorStudents: undefined;
   TutorAssignments: undefined;
-  Profile: undefined;
   Messages: undefined;
   Settings: undefined;
 };
@@ -42,6 +42,12 @@ export type StudentStackParamList = {
   GradeDetails: { gradeId: number };
 };
 
+export type SubscriptionStackParamList = {
+  SubscriptionPackages: undefined;
+  SubscriptionPayment: undefined;
+  SubscriptionPending: undefined;
+};
+
 export type ParentTabParamList = {
   ParentDashboard: undefined;
   ParentClasses: undefined;
@@ -49,9 +55,13 @@ export type ParentTabParamList = {
   ParentGrades: undefined;
   ParentAttendance: undefined;
   ParentBilling: undefined;
-  Profile: undefined;
   Messages: undefined;
   Settings: undefined;
+};
+
+export type ParentStackParamList = {
+  ParentTabs: NavigatorScreenParams<ParentTabParamList>;
+  AddStudent: undefined;
 };
 
 declare global {

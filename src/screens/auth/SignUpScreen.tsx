@@ -37,7 +37,7 @@ export const SignUpScreen: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState<'student' | 'tutor' | 'parent'>('student');
+  const [role, setRole] = useState<'tutor' | 'parent'>('tutor');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -134,7 +134,7 @@ export const SignUpScreen: React.FC = () => {
           <View style={styles.header}>
             <Logo size="medium" showTagline={false} />
             <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Sign up to start your learning journey</Text>
+            <Text style={styles.subtitle}>Sign up as a tutor or parent to get started</Text>
           </View>
 
           {/* Form Card */}
@@ -187,11 +187,11 @@ export const SignUpScreen: React.FC = () => {
               error={errors.confirmPassword}
             />
 
-            {/* Role Picker */}
+            {/* Role Picker - Only tutor and parent can sign up on mobile */}
             <View style={styles.roleContainer}>
               <Text style={styles.label}>I am a:</Text>
               <View style={styles.roleButtons}>
-                {(['student', 'tutor', 'parent'] as const).map((r) => (
+                {(['tutor', 'parent'] as const).map((r) => (
                   <TouchableOpacity
                     key={r}
                     style={[styles.roleButton, role === r && styles.roleButtonActive]}
@@ -199,7 +199,7 @@ export const SignUpScreen: React.FC = () => {
                     activeOpacity={0.7}
                   >
                     <Text style={styles.roleIcon}>
-                      {r === 'student' ? '🎓' : r === 'tutor' ? '👨‍🏫' : '👨‍👩‍👧'}
+                      {r === 'tutor' ? '👨‍🏫' : '👨‍👩‍👧'}
                     </Text>
                     <Text style={[styles.roleButtonText, role === r && styles.roleButtonTextActive]}>
                       {r.charAt(0).toUpperCase() + r.slice(1)}

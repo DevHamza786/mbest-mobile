@@ -61,6 +61,8 @@ import {
   Link,
   PlayCircle,
   Tag,
+  LogOut,
+  Crown,
 } from 'lucide-react-native';
 import { colors } from '../../constants/colors';
 
@@ -186,6 +188,8 @@ const iconMap: Record<IconName, React.ComponentType<any>> = {
   'link': Link,
   'play-circle': PlayCircle,
   'tag': Tag,
+  'log-out': LogOut,
+  'crown': Crown,
 };
 
 export const Icon: React.FC<IconProps> = ({

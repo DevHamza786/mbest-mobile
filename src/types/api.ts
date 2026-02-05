@@ -12,6 +12,8 @@ export interface User {
   role: 'admin' | 'tutor' | 'student' | 'parent';
   phone?: string;
   avatar?: string;
+  package_id?: number | null;
+  subscription_status?: 'active' | 'pending' | 'rejected' | 'expired' | 'cancelled' | null;
 }
 
 export interface LoginRequest {

@@ -1,5 +1,5 @@
 import { apiClient } from './config';
-import type { ApiResponse, LoginRequest, LoginResponse } from '../../types/api';
+import type { ApiResponse, LoginRequest, LoginResponse, User } from '../../types/api';
 
 export const authService = {
   // Login
@@ -32,6 +32,40 @@ export const authService = {
       '/auth/forgot-password',
       { email }
     );
+    return response.data;
+  },
+
+  // Logout
+  logout: async (): Promise<ApiResponse<{ message: string }>> => {
+    try {
+      const response = await apiClient.post<ApiResponse<{ message: string }>>('/auth/logout');
+      return response.data;
+    } catch (error: any) {
+      // Even if API call fails, we still want to logout locally
+      console.warn('Logout API error:', error);
+      return { success: true, data: { message: 'Logged out' } };
+    }
+  },
+
+  // Get current user profile
+  getProfile: async (): Promise<ApiResponse<User>> => {
+    const response = await apiClient.get<ApiResponse<User>>('/profile');
+    return response.data;
+  },
+
+  // Update profile
+  updateProfile: async (data: { name?: string; phone?: string }): Promise<ApiResponse<User>> => {
+    const response = await apiClient.put<ApiResponse<User>>('/profile', data);
+    return response.data;
+  },
+
+  // Change password
+  changePassword: async (data: {
+    current_password: string;
+    password: string;
+    password_confirmation: string;
+  }): Promise<ApiResponse<{ message: string }>> => {
+    const response = await apiClient.post<ApiResponse<{ message: string }>>('/auth/change-password', data);
     return response.data;
   },
 };

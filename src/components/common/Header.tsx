@@ -42,9 +42,12 @@ export const Header: React.FC<HeaderProps> = ({
   const { user } = useAuthStore();
 
   const handleProfilePress = () => {
-    // Get root navigator to navigate to Profile screen
-    const rootNavigation = navigation.getParent() || navigation;
-    (rootNavigation as NavigationProp<RootStackParamList>).navigate('Profile');
+    // Navigate to root Profile - go up to find RootStack (handles nested navigators)
+    let nav: any = navigation;
+    while (nav?.getParent?.()) {
+      nav = nav.getParent();
+    }
+    (nav as NavigationProp<RootStackParamList>).navigate('Profile');
   };
 
   const handleBackPress = () => {

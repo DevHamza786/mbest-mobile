@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { User } from '../types/api';
+import { authService } from '../services/api/auth';
+import { useParentStore } from './parentStore';
+import { useSubscriptionStore } from './subscriptionStore';
 
 // Safe AsyncStorage wrapper
 const safeAsyncStorage = {
@@ -55,8 +58,15 @@ const authStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.warn('Logout API error:', error);
+    }
     await safeAsyncStorage.removeItem('auth_token');
     await safeAsyncStorage.removeItem('user');
+    useParentStore.getState().clearSelectedChild();
+    useSubscriptionStore.getState().clearSubscription();
     set({ user: null, token: null, isAuthenticated: false });
   },
 
@@ -65,6 +75,13 @@ const authStore = create<AuthState>((set) => ({
       const token = await safeAsyncStorage.getItem('auth_token');
       const userStr = await safeAsyncStorage.getItem('user');
       const user = userStr ? JSON.parse(userStr) : null;
+      // Admin cannot use mobile app - clear any persisted admin auth
+      if (user?.role === 'admin') {
+        await safeAsyncStorage.removeItem('auth_token');
+        await safeAsyncStorage.removeItem('user');
+        set({ user: null, token: null, isAuthenticated: false });
+        return;
+      }
       set({ user, token, isAuthenticated: !!(user && token) });
     } catch (error) {
       console.error('Error loading auth:', error);
