@@ -1,6 +1,6 @@
 /**
- * TutorCalendarScreen - MBEST Mobile App
- * Calendar view for tutor sessions with selected date details
+ * TutorSessionsScreen - MBEST Mobile App
+ * Calendar view with session details - matching web app
  */
 
 import React, { useState, useMemo } from 'react';
@@ -25,6 +25,7 @@ import { Card } from '../../components/common/Card';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { Header } from '../../components/common/Header';
 import { Icon } from '../../components/common/Icon';
+import { Button } from '../../components/common/Button';
 import type { TutorStackParamList } from '../../types/navigation';
 import type { Session } from '../../services/api/tutor';
 
@@ -73,13 +74,12 @@ const calculateDuration = (startTime: string, endTime: string) => {
   return `${minutes}m`;
 };
 
-export const TutorCalendarScreen: React.FC = () => {
+export const TutorSessionsScreen: React.FC = () => {
   const navigation = useNavigation<NavigationPropType>();
   const { token } = useAuthStore();
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
-
   // Calculate date range for API call (current month)
   const monthStart = useMemo(() => {
     const date = new Date(currentMonth);
@@ -181,8 +181,13 @@ export const TutorCalendarScreen: React.FC = () => {
           title="Calendar"
           showProfile
           rightAction={
-            <TouchableOpacity onPress={handleCreate} style={styles.addButton}>
-              <Icon name="plus" size={16} color={colors.textInverse} />
+            <TouchableOpacity
+              onPress={handleCreate}
+              style={styles.addButton}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Icon name="plus" size={20} color={colors.textInverse} />
               <Text style={styles.addButtonText}>Add Lesson</Text>
             </TouchableOpacity>
           }
@@ -505,6 +510,7 @@ export const TutorCalendarScreen: React.FC = () => {
           )}
         </View>
       </ScrollView>
+
     </View>
   );
 };

@@ -4,7 +4,7 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 export type RootStackParamList = {
   Splash: undefined;
   Auth: NavigatorScreenParams<AuthStackParamList>;
-  Tutor: NavigatorScreenParams<TutorTabParamList>;
+  Tutor: NavigatorScreenParams<TutorStackParamList>;
   Student: NavigatorScreenParams<StudentStackParamList>;
   Parent: NavigatorScreenParams<ParentStackParamList>;
   Subscription: NavigatorScreenParams<SubscriptionStackParamList>;
@@ -22,8 +22,28 @@ export type TutorTabParamList = {
   TutorCalendar: undefined;
   TutorStudents: undefined;
   TutorAssignments: undefined;
+  TutorMore: undefined;
   Messages: undefined;
   Settings: undefined;
+};
+
+export type TutorStackParamList = {
+  TutorTabs: NavigatorScreenParams<TutorTabParamList>;
+  TutorClasses: undefined;
+  TutorClassDetails: { classId: number };
+  TutorStudentDetails: { studentId: number };
+  TutorAssignmentDetails: { assignmentId: number };
+  TutorLessonRequests: undefined;
+  TutorSessions: undefined;
+  TutorSessionDetails: { sessionId: number };
+  AddLesson: { sessionId?: number } | undefined;
+  TutorAvailability: undefined;
+  TutorAttendance: undefined;
+  TutorHours: undefined;
+  TutorInvoices: undefined;
+  TutorLessonHistory: undefined;
+  TutorQuestions: undefined;
+  TutorResources: undefined;
 };
 
 export type StudentTabParamList = {

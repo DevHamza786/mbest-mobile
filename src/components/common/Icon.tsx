@@ -9,6 +9,9 @@ import {
   Home,
   Book,
   FileText,
+  File,
+  Video,
+  Inbox,
   Star,
   CheckCircle,
   Calendar,
@@ -19,10 +22,12 @@ import {
   Bell,
   Settings,
   MessageCircle,
+  MessageSquare,
   Search,
   Filter,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   ArrowRight,
   ArrowLeft,
   Plus,
@@ -70,6 +75,9 @@ export type IconName =
   | 'home'
   | 'book'
   | 'file-text'
+  | 'file'
+  | 'video'
+  | 'inbox'
   | 'star'
   | 'check-circle'
   | 'calendar'
@@ -80,10 +88,12 @@ export type IconName =
   | 'bell'
   | 'settings'
   | 'message-circle'
+  | 'message-square'
   | 'search'
   | 'filter'
   | 'chevron-right'
   | 'chevron-left'
+  | 'chevron-down'
   | 'arrow-right'
   | 'arrow-left'
   | 'plus'
@@ -136,6 +146,9 @@ const iconMap: Record<IconName, React.ComponentType<any>> = {
   'home': Home,
   'book': Book,
   'file-text': FileText,
+  'file': File,
+  'video': Video,
+  'inbox': Inbox,
   'star': Star,
   'check-circle': CheckCircle,
   'calendar': Calendar,
@@ -146,10 +159,12 @@ const iconMap: Record<IconName, React.ComponentType<any>> = {
   'bell': Bell,
   'settings': Settings,
   'message-circle': MessageCircle,
+  'message-square': MessageSquare,
   'search': Search,
   'filter': Filter,
   'chevron-right': ChevronRight,
   'chevron-left': ChevronLeft,
+  'chevron-down': ChevronDown,
   'arrow-right': ArrowRight,
   'arrow-left': ArrowLeft,
   'plus': Plus,

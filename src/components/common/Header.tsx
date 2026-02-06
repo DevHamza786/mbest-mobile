@@ -76,13 +76,19 @@ export const Header: React.FC<HeaderProps> = ({
         </View>
         <View style={styles.rightSection}>
           {rightAction && (
-            <TouchableOpacity
-              onPress={onRightActionPress}
-              style={styles.rightActionButton}
-              activeOpacity={0.7}
-            >
-              {rightAction}
-            </TouchableOpacity>
+            onRightActionPress ? (
+              <TouchableOpacity
+                onPress={onRightActionPress}
+                style={styles.rightActionButton}
+                activeOpacity={0.7}
+              >
+                {rightAction}
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.rightActionButton} pointerEvents="box-none">
+                {rightAction}
+              </View>
+            )
           )}
           {showProfile && (
             <TouchableOpacity

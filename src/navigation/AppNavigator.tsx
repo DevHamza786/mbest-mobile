@@ -25,6 +25,22 @@ import { TutorDashboardScreen } from '../screens/tutor/TutorDashboardScreen';
 import { TutorCalendarScreen } from '../screens/tutor/TutorCalendarScreen';
 import { TutorStudentsScreen } from '../screens/tutor/TutorStudentsScreen';
 import { TutorAssignmentsScreen } from '../screens/tutor/TutorAssignmentsScreen';
+import { TutorMoreScreen } from '../screens/tutor/TutorMoreScreen';
+import { TutorClassesScreen } from '../screens/tutor/TutorClassesScreen';
+import { TutorClassDetailsScreen } from '../screens/tutor/TutorClassDetailsScreen';
+import { TutorStudentDetailsScreen } from '../screens/tutor/TutorStudentDetailsScreen';
+import { TutorAssignmentDetailsScreen } from '../screens/tutor/TutorAssignmentDetailsScreen';
+import { TutorLessonRequestsScreen } from '../screens/tutor/TutorLessonRequestsScreen';
+import { TutorSessionsScreen } from '../screens/tutor/TutorSessionsScreen';
+import { TutorSessionDetailsScreen } from '../screens/tutor/TutorSessionDetailsScreen';
+import { TutorAvailabilityScreen } from '../screens/tutor/TutorAvailabilityScreen';
+import { TutorAttendanceScreen } from '../screens/tutor/TutorAttendanceScreen';
+import { TutorHoursScreen } from '../screens/tutor/TutorHoursScreen';
+import { TutorInvoicesScreen } from '../screens/tutor/TutorInvoicesScreen';
+import { TutorLessonHistoryScreen } from '../screens/tutor/TutorLessonHistoryScreen';
+import { TutorQuestionsScreen } from '../screens/tutor/TutorQuestionsScreen';
+import { AddLessonScreen } from '../screens/tutor/AddLessonScreen';
+import { TutorResourcesScreen } from '../screens/tutor/TutorResourcesScreen';
 
 // Student Screens
 import { StudentDashboardScreen } from '../screens/student/StudentDashboardScreen';
@@ -50,11 +66,12 @@ import { ProfileScreen } from '../screens/common/ProfileScreen';
 import { SettingsScreen } from '../screens/common/SettingsScreen';
 import { ParentGate } from '../components/ParentGate';
 
-import type { RootStackParamList, AuthStackParamList, TutorTabParamList, StudentTabParamList, StudentStackParamList, ParentTabParamList, ParentStackParamList } from '../types/navigation';
+import type { RootStackParamList, AuthStackParamList, TutorTabParamList, TutorStackParamList, StudentTabParamList, StudentStackParamList, ParentTabParamList, ParentStackParamList } from '../types/navigation';
 
 const RootStack = createStackNavigator<RootStackParamList>();
 const AuthStack = createStackNavigator<AuthStackParamList>();
 const TutorTab = createBottomTabNavigator<TutorTabParamList>();
+const TutorStack = createStackNavigator<TutorStackParamList>();
 const StudentTab = createBottomTabNavigator<StudentTabParamList>();
 const StudentStack = createStackNavigator<StudentStackParamList>();
 const ParentTab = createBottomTabNavigator<ParentTabParamList>();
@@ -71,8 +88,8 @@ const AuthNavigator = () => {
   );
 };
 
-// Tutor Tab Navigator
-const TutorNavigator = () => {
+// Tutor Tab Navigator (used inside TutorStack)
+const TutorTabsNavigator = () => {
   const insets = useSafeAreaInsets();
   const safeBottomPadding = Math.max(insets.bottom, Platform.OS === 'ios' ? spacing.sm : spacing.xs);
   const baseHeight = Platform.OS === 'ios' ? 60 : 64;
@@ -126,7 +143,7 @@ const TutorNavigator = () => {
         name="TutorDashboard" 
         component={TutorDashboardScreen} 
         options={{ 
-          title: 'Dashboard', 
+          headerShown: false, // Use custom Header component
           tabBarLabel: 'Home',
           tabBarIcon: ({ color, size }) => (
             <Icon name="home" size={size || 22} color={color} />
@@ -137,7 +154,7 @@ const TutorNavigator = () => {
         name="TutorCalendar" 
         component={TutorCalendarScreen} 
         options={{ 
-          title: 'Calendar', 
+          headerShown: false, // Use custom Header component
           tabBarLabel: 'Calendar',
           tabBarIcon: ({ color, size }) => (
             <Icon name="calendar" size={size || 20} color={color} />
@@ -148,7 +165,7 @@ const TutorNavigator = () => {
         name="TutorStudents" 
         component={TutorStudentsScreen} 
         options={{ 
-          title: 'Students', 
+          headerShown: false, // Use custom Header component
           tabBarLabel: 'Students',
           tabBarIcon: ({ color, size }) => (
             <Icon name="users" size={size || 20} color={color} />
@@ -159,14 +176,53 @@ const TutorNavigator = () => {
         name="TutorAssignments" 
         component={TutorAssignmentsScreen} 
         options={{ 
-          title: 'Assignments', 
+          headerShown: false, // Use custom Header component
           tabBarLabel: 'Assignments',
           tabBarIcon: ({ color, size }) => (
             <Icon name="file-text" size={size || 20} color={color} />
           ),
         }} 
       />
+      <TutorTab.Screen 
+        name="TutorMore" 
+        component={TutorMoreScreen} 
+        options={{ 
+          headerShown: false, // Use custom Header component
+          tabBarLabel: 'More', 
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="more-vertical" size={size || 20} color={color} />
+          ),
+        }} 
+      />
     </TutorTab.Navigator>
+  );
+};
+
+// Tutor Stack Navigator (wraps tabs and includes detail screens)
+const TutorNavigator = () => {
+  return (
+    <TutorStack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <TutorStack.Screen name="TutorTabs" component={TutorTabsNavigator} />
+      <TutorStack.Screen name="TutorClasses" component={TutorClassesScreen} />
+      <TutorStack.Screen name="TutorClassDetails" component={TutorClassDetailsScreen} />
+      <TutorStack.Screen name="TutorStudentDetails" component={TutorStudentDetailsScreen} />
+      <TutorStack.Screen name="TutorAssignmentDetails" component={TutorAssignmentDetailsScreen} />
+      <TutorStack.Screen name="TutorLessonRequests" component={TutorLessonRequestsScreen} />
+      <TutorStack.Screen name="TutorSessions" component={TutorSessionsScreen} />
+      <TutorStack.Screen name="TutorSessionDetails" component={TutorSessionDetailsScreen} />
+      <TutorStack.Screen name="AddLesson" component={AddLessonScreen} />
+      <TutorStack.Screen name="TutorAvailability" component={TutorAvailabilityScreen} />
+      <TutorStack.Screen name="TutorAttendance" component={TutorAttendanceScreen} />
+      <TutorStack.Screen name="TutorHours" component={TutorHoursScreen} />
+      <TutorStack.Screen name="TutorInvoices" component={TutorInvoicesScreen} />
+      <TutorStack.Screen name="TutorLessonHistory" component={TutorLessonHistoryScreen} />
+      <TutorStack.Screen name="TutorQuestions" component={TutorQuestionsScreen} />
+      <TutorStack.Screen name="TutorResources" component={TutorResourcesScreen} />
+    </TutorStack.Navigator>
   );
 };
 

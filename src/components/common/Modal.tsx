@@ -24,6 +24,7 @@ interface ModalProps {
   visible: boolean;
   onClose: () => void;
   title: string;
+  subtitle?: string;
   children: React.ReactNode;
   showCloseButton?: boolean;
   /** Max height in pixels. When undefined, uses 90% of screen height. */
@@ -34,6 +35,7 @@ export const Modal: React.FC<ModalProps> = ({
   visible,
   onClose,
   title,
+  subtitle,
   children,
   showCloseButton = true,
   maxHeight,
@@ -80,7 +82,10 @@ export const Modal: React.FC<ModalProps> = ({
               >
                 {/* Header */}
                 <View style={styles.header}>
-                  <Text style={styles.title}>{title}</Text>
+                  <View style={styles.headerText}>
+                    <Text style={styles.title}>{title}</Text>
+                    {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+                  </View>
                   {showCloseButton && (
                     <TouchableOpacity
                       onPress={onClose}
@@ -115,6 +120,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 9999,
+    elevation: 9999,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -152,11 +159,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
   },
+  headerText: {
+    flex: 1,
+  },
   title: {
     fontSize: 18,
     fontWeight: '700',
     color: colors.text,
-    flex: 1,
+    includeFontPadding: false,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
     includeFontPadding: false,
   },
   closeButton: {
