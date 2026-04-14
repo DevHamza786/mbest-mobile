@@ -114,6 +114,7 @@ export const ParentDashboardScreen: React.FC = () => {
   }
   const stats = dashboardData?.stats;
   const recentGrades = dashboardData?.recent_grades || [];
+  const upcomingSessions = (dashboardData as any)?.upcoming_sessions || [];
   const todaySchedule = dashboardData?.today_schedule || [];
   const classesRaw = classesData?.data;
   const classes: Class[] = Array.isArray(classesRaw)
@@ -122,26 +123,17 @@ export const ParentDashboardScreen: React.FC = () => {
       ? (classesRaw as any).data
       : [];
 
-  const overallGrade = stats?.overall_grade ?? 0;
-  const attendanceRate = stats?.attendance_rate ?? 0;
-  const completedWork = stats?.completed_work ?? 0;
-  const upcomingTests = stats?.upcoming_tests ?? 0;
+  const overallGradeRaw = stats?.overall_grade ?? 0;
+  const attendanceRateRaw = stats?.attendance_rate ?? 0;
+  const overallGrade = Number.isFinite(Number(overallGradeRaw)) ? Number(overallGradeRaw) : 0;
+  const attendanceRate = Number.isFinite(Number(attendanceRateRaw)) ? Number(attendanceRateRaw) : 0;
+  // Stats removed from UI: completed_work, upcoming_tests
 
-  const todayDayName = DAY_NAMES[new Date().getDay()];
-  const todayClasses = todaySchedule.length > 0
-    ? todaySchedule
-    : classes.filter((cls) => {
-        const scheds = cls.schedules || [];
-        if (scheds.length > 0) {
-          return scheds.some((s: any) =>
-            String(s.day_of_week || '').toLowerCase().includes(todayDayName.toLowerCase())
-          );
-        }
-        if (cls.schedule) {
-          return String(cls.schedule).toLowerCase().includes(todayDayName.toLowerCase());
-        }
-        return false;
-      });
+  const upcomingSessionsList: any[] = Array.isArray(upcomingSessions)
+    ? upcomingSessions
+    : Array.isArray(upcomingSessions?.data)
+      ? upcomingSessions.data
+      : [];
 
   const formatSchedule = (cls: Class | any) => {
     const scheds = cls.schedules || [];
@@ -158,6 +150,14 @@ export const ParentDashboardScreen: React.FC = () => {
 
   const getInstructor = (cls: Class | any) => {
     return cls.tutor?.user?.name || cls.tutor_name || cls.instructor || 'Tutor';
+  };
+
+  const formatTimeRange = (start?: string, end?: string) => {
+    if (!start && !end) return '';
+    const s = (start || '').substring(0, 5);
+    const e = (end || '').substring(0, 5);
+    if (s && e) return `${s} - ${e}`;
+    return s || e;
   };
 
   const getChildName = (child: { name?: string; user?: { name?: string }; student?: { user?: { name?: string } } }) => {
@@ -304,19 +304,35 @@ export const ParentDashboardScreen: React.FC = () => {
           <View style={styles.progressBarBg}>
             <View style={[styles.progressBarFill, { width: `${Math.min(100, overallGrade)}%` }]} />
           </View>
-          <Text style={styles.progressValue}>{overallGrade}%</Text>
+          <Text style={styles.progressValue}>{Math.round(overallGrade)}%</Text>
         </View>
         <View style={styles.progressSection}>
           <Text style={styles.progressLabel}>Attendance Rate</Text>
           <View style={styles.progressBarBg}>
             <View style={[styles.progressBarFill, { width: `${Math.min(100, attendanceRate)}%` }]} />
           </View>
-          <Text style={styles.progressValue}>{attendanceRate}%</Text>
+          <Text style={styles.progressValue}>{Math.round(attendanceRate)}%</Text>
         </View>
       </Card>
 
       {/* Statistics Grid */}
       <View style={styles.statsGrid}>
+        <Card variant="elevated" style={styles.statCard}>
+          <View style={styles.statIconTop}>
+            <Icon name="bar-chart" size={24} color={colors.textTertiary} />
+          </View>
+          <Text style={styles.statValue}>{Math.round(overallGrade)}%</Text>
+          <Text style={styles.statSubtext}>Overall performance</Text>
+          <Text style={styles.statLabel}>Overall Grade</Text>
+        </Card>
+        <Card variant="elevated" style={styles.statCard}>
+          <View style={styles.statIconTop}>
+            <Icon name="activity" size={24} color={colors.textTertiary} />
+          </View>
+          <Text style={styles.statValue}>{Math.round(attendanceRate)}%</Text>
+          <Text style={styles.statSubtext}>Attendance rate</Text>
+          <Text style={styles.statLabel}>Attendance Rate</Text>
+        </Card>
         <Card variant="elevated" style={styles.statCard}>
           <View style={styles.statIconTop}>
             <Icon name="book" size={24} color={colors.textTertiary} />
@@ -332,22 +348,6 @@ export const ParentDashboardScreen: React.FC = () => {
           <Text style={styles.statValue}>{stats?.active_assignments || 0}</Text>
           <Text style={styles.statSubtext}>Currently due</Text>
           <Text style={styles.statLabel}>Active Assignments</Text>
-        </Card>
-        <Card variant="elevated" style={styles.statCard}>
-          <View style={styles.statIconTop}>
-            <Icon name="check-circle" size={24} color={colors.textTertiary} />
-          </View>
-          <Text style={styles.statValue}>{completedWork}</Text>
-          <Text style={styles.statSubtext}>This month</Text>
-          <Text style={styles.statLabel}>Completed Work</Text>
-        </Card>
-        <Card variant="elevated" style={styles.statCard}>
-          <View style={styles.statIconTop}>
-            <Icon name="clock" size={24} color={colors.textTertiary} />
-          </View>
-          <Text style={styles.statValue}>{upcomingTests}</Text>
-          <Text style={styles.statSubtext}>Next 2 weeks</Text>
-          <Text style={styles.statLabel}>Upcoming Tests</Text>
         </Card>
       </View>
 
@@ -366,27 +366,53 @@ export const ParentDashboardScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
         {recentGrades.length > 0 ? (
-          recentGrades.map((grade) => (
-            <Card key={grade.id} variant="elevated" style={styles.gradeCard}>
-              <Text style={styles.gradeAssignment}>{grade.assignment_name}</Text>
-              {grade.class && (
-                <Text style={styles.gradeClass}>{grade.class}</Text>
-              )}
-              <View style={styles.gradeRow}>
-                <Text style={styles.gradeScore}>
-                  {grade.grade}/{grade.max_points}
+          recentGrades.map((g: any) => {
+            const title =
+              g.assessment ||
+              g.assignment?.title ||
+              g.assessment_name ||
+              g.assignment_name ||
+              'Assessment';
+            const subjectOrClass = g.subject || g.class_model?.name || g.class_name || g.class?.name || g.class || '';
+
+            const gradeValue = Number(g.grade ?? g.score ?? 0);
+            const maxValue = Number(g.max_grade ?? g.max_points ?? g.assignment?.max_points ?? 0);
+            const percent =
+              typeof g.percentage === 'number'
+                ? g.percentage
+                : maxValue > 0
+                  ? Math.round((gradeValue / maxValue) * 100)
+                  : 0;
+
+            return (
+              <Card key={g.id || `${title}-${g.date}`} variant="elevated" style={styles.gradeCard}>
+                <Text style={styles.gradeAssignment} numberOfLines={1}>
+                  {title}
                 </Text>
-                <Text style={styles.gradePercentage}>{grade.percentage}%</Text>
-              </View>
-              <Text style={styles.gradeDate}>
-                {new Date(grade.date).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
-              </Text>
-            </Card>
-          ))
+                {!!subjectOrClass && (
+                  <Text style={styles.gradeClass} numberOfLines={1}>
+                    {subjectOrClass}
+                  </Text>
+                )}
+                <View style={styles.gradeRow}>
+                  <Text style={styles.gradeScore}>
+                    {Number.isFinite(gradeValue) ? gradeValue : '—'}
+                    {maxValue ? `/${maxValue}` : ''}
+                  </Text>
+                  <Text style={styles.gradePercentage}>{percent}%</Text>
+                </View>
+                <Text style={styles.gradeDate}>
+                  {g.date
+                    ? new Date(g.date).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })
+                    : '—'}
+                </Text>
+              </Card>
+            );
+          })
         ) : (
           <Card variant="outlined" style={styles.emptyCard}>
             <Text style={styles.emptyText}>No recent grades</Text>
@@ -394,30 +420,59 @@ export const ParentDashboardScreen: React.FC = () => {
         )}
       </View>
 
-      {/* Today's Schedule */}
+      {/* Upcoming Sessions */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Today's Schedule</Text>
-        <Text style={styles.sectionSubtitle}>Classes scheduled for today</Text>
-        {todayClasses.length > 0 ? (
-          todayClasses.map((cls) => (
-            <Card key={cls.id} variant="elevated" style={styles.scheduleCard}>
+        <View style={styles.sectionHeaderRow}>
+          <View>
+            <Text style={styles.sectionTitle}>Upcoming Sessions</Text>
+            <Text style={styles.sectionSubtitle}>Your next scheduled sessions</Text>
+          </View>
+          <TouchableOpacity onPress={() => navigation.navigate('ParentClasses')} activeOpacity={0.7}>
+            <View style={styles.viewAllButton}>
+              <Text style={styles.viewAllText}>View All</Text>
+              <Icon name="chevron-right" size={16} color={colors.primary} />
+            </View>
+          </TouchableOpacity>
+        </View>
+        {upcomingSessionsList.length > 0 ? (
+          upcomingSessionsList.map((s: any) => (
+            <Card key={s.id} variant="elevated" style={styles.scheduleCard}>
               <View style={styles.scheduleHeader}>
-                <Text style={styles.scheduleClassName}>{cls.name || cls.subject || 'Class'}</Text>
+                <Text style={styles.scheduleClassName} numberOfLines={1}>
+                  {s.class_name || s.subject || 'Session'}
+                </Text>
               </View>
-              {formatSchedule(cls).map((sched: string, i: number) => (
-                <View key={i} style={styles.scheduleRow}>
-                  <Icon name="clock" size={14} color={colors.textSecondary} />
-                  <Text style={styles.scheduleText}>{sched}</Text>
+
+              <View style={styles.scheduleRow}>
+                <Icon name="calendar" size={14} color={colors.textSecondary} />
+                <Text style={styles.scheduleText}>
+                  {s.day_name || (s.date ? new Date(s.date).toLocaleDateString('en-US', { weekday: 'long' }) : '—')}
+                  {s.date
+                    ? ` • ${new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                    : ''}
+                </Text>
+              </View>
+
+              <View style={styles.scheduleRow}>
+                <Icon name="clock" size={14} color={colors.textSecondary} />
+                <Text style={styles.scheduleText}>{formatTimeRange(s.start_time, s.end_time) || '—'}</Text>
+              </View>
+
+              {!!s.location && (
+                <View style={styles.scheduleRow}>
+                  <Icon name="map-pin" size={14} color={colors.textSecondary} />
+                  <Text style={styles.scheduleText}>{s.location}</Text>
                 </View>
-              ))}
+              )}
+
               <Text style={styles.scheduleInstructor}>
-                with {getInstructor(cls)}
+                with {s.teacher_name || 'Tutor'}
               </Text>
             </Card>
           ))
         ) : (
           <Card variant="outlined" style={styles.emptyCard}>
-            <Text style={styles.emptyText}>No classes scheduled for today</Text>
+            <Text style={styles.emptyText}>No upcoming sessions</Text>
           </Card>
         )}
       </View>

@@ -29,6 +29,7 @@ export type TutorTabParamList = {
 
 export type TutorStackParamList = {
   TutorTabs: NavigatorScreenParams<TutorTabParamList>;
+  TutorProfileComplete: undefined;
   TutorClasses: undefined;
   TutorClassDetails: { classId: number };
   TutorStudentDetails: { studentId: number };

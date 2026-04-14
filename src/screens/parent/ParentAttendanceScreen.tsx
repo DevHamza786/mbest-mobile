@@ -28,6 +28,35 @@ const getChildName = (child: { name?: string; user?: { name?: string }; student?
   return child.name || child.user?.name || child.student?.user?.name || 'Student';
 };
 
+const formatDate = (date?: string) => {
+  if (!date) return '—';
+  try {
+    return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch {
+    return String(date);
+  }
+};
+
+const formatTime = (t?: string) => (t ? String(t).substring(0, 5) : '');
+
+const formatTimeRange = (start?: string, end?: string) => {
+  const s = formatTime(start);
+  const e = formatTime(end);
+  if (s && e) return `${s} - ${e}`;
+  return s || e || '—';
+};
+
+const toAttendanceStatus = (r: any) => String(r?.attendance_status || r?.status || '').toLowerCase();
+
+const statusColor = (statusLower: string) =>
+  statusLower === 'present'
+    ? colors.success
+    : statusLower === 'absent'
+      ? colors.error
+      : statusLower.includes('late')
+        ? colors.warning
+        : colors.textSecondary;
+
 export const ParentAttendanceScreen: React.FC = () => {
   const { token } = useAuthStore();
   const { selectedChildId, selectedChild, setSelectedChild } = useParentStore();
@@ -84,13 +113,16 @@ export const ParentAttendanceScreen: React.FC = () => {
     );
   }
 
-  const responseData = data?.data;
+  // API response shape:
+  // { success: true, data: { current_page, data: [...] }, stats: {...} }
+  const apiPayload: any = data as any;
+  const responseData = apiPayload?.data;
   const attendanceRaw = Array.isArray(responseData)
     ? responseData
     : responseData?.data ?? responseData?.records ?? responseData?.attendance ?? [];
   const records: any[] = Array.isArray(attendanceRaw) ? attendanceRaw : [];
 
-  const stats = responseData?.stats ?? responseData?.summary ?? {};
+  const stats = apiPayload?.stats ?? responseData?.stats ?? responseData?.summary ?? {};
   const dashboardStats = dashboardRaw?.stats;
   const overallRate =
     stats.overall_rate ??
@@ -98,24 +130,51 @@ export const ParentAttendanceScreen: React.FC = () => {
     stats.rate ??
     dashboardStats?.attendance_rate ??
     0;
-  const presentCount = stats.present ?? stats.present_count ?? records.filter((r: any) => 
-    String(r.status || r.attendance_status || '').toLowerCase() === 'present'
-  ).length;
-  const absentCount = stats.absent ?? stats.absent_count ?? records.filter((r: any) =>
-    String(r.status || r.attendance_status || '').toLowerCase() === 'absent'
-  ).length;
-  const lateCount = stats.late ?? stats.late_arrivals ?? stats.late_count ?? records.filter((r: any) =>
-    String(r.status || r.attendance_status || '').toLowerCase().includes('late')
-  ).length;
+  const presentCount = stats.present ?? stats.present_count ?? records.filter((r: any) => toAttendanceStatus(r) === 'present').length;
+  const absentCount = stats.absent ?? stats.absent_count ?? records.filter((r: any) => toAttendanceStatus(r) === 'absent').length;
+  const lateCount = stats.late ?? stats.late_arrivals ?? stats.late_count ?? records.filter((r: any) => toAttendanceStatus(r).includes('late')).length;
+  const totalSessions = stats.total_sessions ?? stats.total ?? records.length;
 
   const displayRecords =
     viewMode === 'byClass'
       ? [...records].sort((a, b) => {
-          const clsA = a.class_name || a.class?.name || a.class || '';
-          const clsB = b.class_name || b.class?.name || b.class || '';
+          const clsA = a.class_model?.name || a.class_name || a.class?.name || a.class || '';
+          const clsB = b.class_model?.name || b.class_name || b.class?.name || b.class || '';
           return clsA.localeCompare(clsB);
         })
       : records;
+
+  const groupedByClass = (() => {
+    const map = new Map<
+      string,
+      {
+        className: string;
+        items: any[];
+        present: number;
+        absent: number;
+        late: number;
+        total: number;
+        rate: number;
+      }
+    >();
+    for (const r of records) {
+      const className = r.class_model?.name || r.class_name || r.class?.name || r.class || 'Class';
+      const key = String(r.class_id || className);
+      const entry =
+        map.get(key) || ({ className, items: [], present: 0, absent: 0, late: 0, total: 0, rate: 0 } as any);
+      entry.items.push(r);
+      const st = toAttendanceStatus(r);
+      entry.total += 1;
+      if (st === 'present') entry.present += 1;
+      else if (st === 'absent') entry.absent += 1;
+      else if (st.includes('late')) entry.late += 1;
+      map.set(key, entry);
+    }
+    for (const e of map.values()) {
+      e.rate = e.total > 0 ? Math.round((e.present / e.total) * 100) : 0;
+    }
+    return Array.from(map.values()).sort((a, b) => b.rate - a.rate);
+  })();
 
   return (
     <ScrollView
@@ -220,65 +279,107 @@ export const ParentAttendanceScreen: React.FC = () => {
             </Text>
           </TouchableOpacity>
         </View>
-        <Text style={styles.sectionTitle}>Attendance Records</Text>
-        <Text style={styles.sectionSubtitle}>
-          Complete attendance history for {activeChild ? getChildName(activeChild) : 'student'} across all classes
-        </Text>
+        {viewMode === 'history' ? (
+          <>
+            <Text style={styles.sectionTitle}>Attendance Records</Text>
+            <Text style={styles.sectionSubtitle}>
+              Complete attendance history for {activeChild ? getChildName(activeChild) : 'student'} across all classes
+            </Text>
 
-        {/* Table Header */}
-        <View style={styles.tableHeader}>
-          <Text style={[styles.tableHeaderCell, styles.colClass]}>Class</Text>
-          <Text style={[styles.tableHeaderCell, styles.colDateTime]}>Date & Time</Text>
-          <Text style={[styles.tableHeaderCell, styles.colMode]}>Mode</Text>
-          <Text style={[styles.tableHeaderCell, styles.colStatus]}>Status</Text>
-          <Text style={[styles.tableHeaderCell, styles.colMarkedBy]}>Marked By</Text>
-        </View>
-
-        {/* Table Rows */}
-        {displayRecords.length > 0 ? (
-          displayRecords.map((item: any) => {
-            const status = item.status || item.attendance_status || '—';
-            const statusLower = String(status).toLowerCase();
-            const statusColor =
-              statusLower === 'present' ? colors.success
-              : statusLower === 'absent' ? colors.error
-              : statusLower.includes('late') ? colors.warning
-              : colors.textSecondary;
-            return (
-              <View key={item.id || `${item.date}-${item.class_name}`} style={styles.tableRow}>
-                <Text style={[styles.tableCell, styles.colClass]} numberOfLines={1}>
-                  {item.class_name || item.class?.name || item.class || '—'}
-                </Text>
-                <Text style={[styles.tableCell, styles.colDateTime]} numberOfLines={1}>
-                  {item.date
-                    ? new Date(item.date).toLocaleString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })
-                    : item.date_time || '—'}
-                </Text>
-                <Text style={[styles.tableCell, styles.colMode]} numberOfLines={1}>
-                  {item.mode || item.attendance_mode || '—'}
-                </Text>
-                <View style={[styles.colStatus, styles.statusCell]}>
-                  <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
-                    <Text style={styles.statusBadgeText}>{status}</Text>
-                  </View>
-                </View>
-                <Text style={[styles.tableCell, styles.colMarkedBy]} numberOfLines={1}>
-                  {item.marked_by || item.tutor?.user?.name || item.instructor || '—'}
-                </Text>
+            <View style={styles.tableContainer}>
+              {/* Table Header */}
+              <View style={styles.tableHeader}>
+                <Text style={[styles.tableHeaderCell, styles.colClass]}>Class</Text>
+                <Text style={[styles.tableHeaderCell, styles.colDateTime]}>Date & Time</Text>
+                <Text style={[styles.tableHeaderCell, styles.colMode]}>Mode</Text>
+                <Text style={[styles.tableHeaderCell, styles.colStatus]}>Status</Text>
+                <Text style={[styles.tableHeaderCell, styles.colMarkedBy]}>Marked By</Text>
               </View>
-            );
-          })
+
+              {/* Table Rows */}
+              {displayRecords.length > 0 ? (
+                displayRecords.map((item: any) => {
+                  const stLower = toAttendanceStatus(item);
+                  const st = item.attendance_status || item.status || '—';
+                  const markedBy =
+                    item.teacher?.user?.name ||
+                    item.marked_by ||
+                    item.tutor?.user?.name ||
+                    item.instructor ||
+                    '—';
+                  const mode =
+                    item.location_type === 'onsite'
+                      ? 'offline'
+                      : item.location_type === 'online'
+                        ? 'online'
+                        : item.mode || item.attendance_mode || '—';
+                  return (
+                    <View key={item.id || `${item.date}-${item.class_id}`} style={styles.tableRow}>
+                      <Text style={[styles.tableCell, styles.colClass]} numberOfLines={1}>
+                        {item.subject || item.class_model?.name || item.class_name || item.class?.name || '—'}
+                      </Text>
+                      <Text style={[styles.tableCell, styles.colDateTime]} numberOfLines={2}>
+                        {formatDate(item.date)}{'\n'}{formatTimeRange(item.start_time, item.end_time)}
+                      </Text>
+                      <View style={styles.colMode}>
+                        <View style={styles.modePill}>
+                          <Text style={styles.modePillText}>{mode}</Text>
+                        </View>
+                      </View>
+                      <View style={[styles.colStatus, styles.statusCell]}>
+                        <View style={[styles.statusBadge, { backgroundColor: statusColor(stLower) }]}>
+                          <Text style={styles.statusBadgeText}>{String(st).toLowerCase()}</Text>
+                        </View>
+                      </View>
+                      <Text style={[styles.tableCell, styles.colMarkedBy]} numberOfLines={1}>
+                        {markedBy}
+                      </Text>
+                    </View>
+                  );
+                })
+              ) : (
+                <View style={styles.tableEmptyState}>
+                  <Icon name="calendar" size={48} color={colors.textTertiary} style={{ opacity: 0.5, marginBottom: spacing.md }} />
+                  <Text style={styles.emptyText}>No attendance records found</Text>
+                </View>
+              )}
+            </View>
+          </>
         ) : (
-          <Card variant="outlined" style={styles.emptyCard}>
-            <Icon name="calendar" size={48} color={colors.textTertiary} style={{ opacity: 0.5, marginBottom: spacing.md }} />
-            <Text style={styles.emptyText}>No attendance records found</Text>
-          </Card>
+          <View>
+            {groupedByClass.length > 0 ? (
+              groupedByClass.map((g) => (
+                <Card key={g.className} variant="elevated" style={styles.byClassCard}>
+                  <Text style={styles.byClassTitle}>{g.className}</Text>
+                  <Text style={styles.byClassSubtitle}>
+                    {g.total} total sessions • {g.rate}% attendance rate
+                  </Text>
+                  <View style={styles.bigProgressBg}>
+                    <View style={[styles.bigProgressFill, { width: `${Math.min(100, g.rate)}%` }]} />
+                  </View>
+                  <View style={styles.byClassStatsRow}>
+                    <View style={[styles.byClassStatBox, styles.presentBox]}>
+                      <Text style={styles.byClassStatValue}>{g.present}</Text>
+                      <Text style={styles.byClassStatLabel}>Present</Text>
+                    </View>
+                    <View style={[styles.byClassStatBox, styles.absentBox]}>
+                      <Text style={styles.byClassStatValue}>{g.absent}</Text>
+                      <Text style={styles.byClassStatLabel}>Absent</Text>
+                    </View>
+                    <View style={[styles.byClassStatBox, styles.lateBox]}>
+                      <Text style={styles.byClassStatValue}>{g.late}</Text>
+                      <Text style={styles.byClassStatLabel}>Late</Text>
+                    </View>
+                  </View>
+                </Card>
+              ))
+            ) : (
+              <Card variant="outlined" style={styles.emptyCard}>
+                <Icon name="calendar" size={48} color={colors.textTertiary} style={{ opacity: 0.5, marginBottom: spacing.md }} />
+                <Text style={styles.emptyText}>No attendance records found</Text>
+              </Card>
+            )}
+          </View>
         )}
       </View>
     </ScrollView>
@@ -494,6 +595,17 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     marginBottom: spacing.sm,
   },
+  tableContainer: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+  },
+  tableEmptyState: {
+    paddingVertical: spacing.xl,
+    alignItems: 'center',
+  },
   tableHeaderCell: {
     fontSize: 12,
     fontWeight: '700',
@@ -520,6 +632,20 @@ const styles = StyleSheet.create({
   statusCell: {
     justifyContent: 'center',
   },
+  modePill: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.info + '25',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: borderRadius.full,
+  },
+  modePillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.info,
+    textTransform: 'lowercase',
+    includeFontPadding: false,
+  },
   statusBadge: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs / 2,
@@ -536,6 +662,68 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     alignItems: 'center',
     marginTop: spacing.md,
+  },
+  byClassCard: {
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    ...shadows.md,
+  },
+  byClassTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: spacing.xs,
+    includeFontPadding: false,
+  },
+  byClassSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+    includeFontPadding: false,
+  },
+  bigProgressBg: {
+    height: 10,
+    backgroundColor: colors.borderLight,
+    borderRadius: borderRadius.full,
+    overflow: 'hidden',
+    marginBottom: spacing.lg,
+  },
+  bigProgressFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.full,
+  },
+  byClassStatsRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  byClassStatBox: {
+    flex: 1,
+    borderRadius: borderRadius.sm,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+  },
+  presentBox: {
+    backgroundColor: colors.success + '1A',
+  },
+  absentBox: {
+    backgroundColor: colors.error + '1A',
+  },
+  lateBox: {
+    backgroundColor: colors.warning + '1A',
+  },
+  byClassStatValue: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: colors.text,
+    includeFontPadding: false,
+  },
+  byClassStatLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+    includeFontPadding: false,
   },
   emptyStateContainer: {
     flex: 1,

@@ -11,10 +11,14 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { useQuery } from '@tanstack/react-query';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../../store/authStore';
+import { authService } from '../../services/api/auth';
 import { colors } from '../../constants/colors';
 import { spacing, borderRadius, shadows } from '../../constants/spacing';
 import { Card } from '../../components/common/Card';
@@ -31,10 +35,31 @@ const hexToRgba = (hex: string, alpha: number): string => {
 
 export const ProfileScreen: React.FC = () => {
   const navigation = useNavigation();
-  const { user, logout } = useAuthStore();
+  const { user, token, logout, setUser } = useAuthStore();
   const insets = useSafeAreaInsets();
   const [showEditModal, setShowEditModal] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+
+  const { refetch: refetchProfile, isRefetching: isRefreshingProfile } = useQuery({
+    queryKey: ['myProfile'],
+    queryFn: () => authService.getProfile(),
+    enabled: !!token,
+    onSuccess: async (res) => {
+      // Backends may wrap user as { data: { user } } or { data: user }
+      const freshUser =
+        (res as any)?.data?.user ||
+        (res as any)?.data?.data ||
+        (res as any)?.data;
+      if (freshUser) {
+        setUser(freshUser);
+        try {
+          await AsyncStorage.setItem('user', JSON.stringify(freshUser));
+        } catch (e) {
+          // ignore storage errors
+        }
+      }
+    },
+  });
 
   React.useEffect(() => {
     console.log('ProfileScreen - showEditModal changed:', showEditModal);
@@ -115,6 +140,14 @@ export const ProfileScreen: React.FC = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshingProfile}
+            onRefresh={() => {
+              refetchProfile();
+            }}
+          />
+        }
       >
         {/* Blue User Information Banner */}
         <View style={styles.userBanner}>

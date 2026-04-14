@@ -35,6 +35,50 @@ const formatScheduleTime = (time: string) => time?.substring(0, 5) || '';
 const formatScheduleLine = (sched: { day_of_week: string; start_time: string; end_time: string }) =>
   `${sched.day_of_week}: ${formatScheduleTime(sched.start_time)}-${formatScheduleTime(sched.end_time)}`;
 
+const formatSessionDate = (date: string) => {
+  try {
+    return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch {
+    return String(date || '');
+  }
+};
+
+const formatTimeRange = (start?: string, end?: string) => {
+  const s = (start || '').substring(0, 5);
+  const e = (end || '').substring(0, 5);
+  if (s && e) return `${s} - ${e}`;
+  return s || e || '';
+};
+
+const getUpcomingSessions = (cls: any) => {
+  const schedules: any[] = Array.isArray(cls?.schedules) ? cls.schedules : [];
+  const now = new Date();
+  return schedules
+    .filter((s) => {
+      const status = String(s?.status || '').toLowerCase();
+      const d = s?.date ? new Date(s.date) : null;
+      if (!d || Number.isNaN(d.getTime())) return false;
+      // only future/today sessions; ignore cancelled
+      return status !== 'cancelled' && d.getTime() >= new Date(now.toDateString()).getTime();
+    })
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+};
+
+/** Non-cancelled class_schedule rows for one class. */
+const countClassSchedulesForClass = (cls: any): number => {
+  const schedules: any[] = Array.isArray(cls?.schedules) ? cls.schedules : [];
+  let n = 0;
+  for (const s of schedules) {
+    if (String(s?.status || '').toLowerCase() === 'cancelled') continue;
+    n += 1;
+  }
+  return n;
+};
+
+/** Sum of all class_schedule rows (excludes cancelled). */
+const countTotalClassSchedules = (classes: any[]) =>
+  classes.reduce((sum, cls) => sum + countClassSchedulesForClass(cls), 0);
+
 export const ParentClassesScreen: React.FC = () => {
   const { token } = useAuthStore();
   const { selectedChildId, selectedChild } = useParentStore();
@@ -42,6 +86,8 @@ export const ParentClassesScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showSessionsModal, setShowSessionsModal] = useState(false);
+  const [sessionsClassId, setSessionsClassId] = useState<number | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['parentChildClasses', selectedChildId],
@@ -80,6 +126,7 @@ export const ParentClassesScreen: React.FC = () => {
 
   const totalClasses = classes.length;
   const activeClasses = classes.filter((c) => c.status === 'active').length;
+  const totalScheduleCount = useMemo(() => countTotalClassSchedules(classes as any[]), [classes]);
 
   if (!selectedChildId) {
     return (
@@ -115,6 +162,20 @@ export const ParentClassesScreen: React.FC = () => {
     setSelectedClassId(null);
   };
 
+  const openSessionsModal = (cls: Class) => {
+    setSessionsClassId(cls.id);
+    setShowSessionsModal(true);
+  };
+
+  const closeSessionsModal = () => {
+    setShowSessionsModal(false);
+    setSessionsClassId(null);
+  };
+
+  const sessionsClass: Class | null =
+    (sessionsClassId ? classes.find((c) => c.id === sessionsClassId) : null) || null;
+  const sessionsList = sessionsClass ? getUpcomingSessions(sessionsClass as any) : [];
+
   return (
     <ScrollView
       style={styles.container}
@@ -142,11 +203,11 @@ export const ParentClassesScreen: React.FC = () => {
         </Card>
         <Card variant="elevated" style={styles.summaryCard}>
           <View style={styles.summaryIconRight}>
-            <Icon name="eye" size={24} color={colors.textTertiary} />
+            <Icon name="calendar" size={24} color={colors.textTertiary} />
           </View>
-          <Text style={styles.summaryValue}>0</Text>
-          <Text style={styles.summarySubtext}>Classes in session</Text>
-          <Text style={styles.summaryLabel}>Live Now</Text>
+          <Text style={styles.summaryValue}>{totalScheduleCount}</Text>
+          <Text style={styles.summarySubtext}>Across enrolled classes</Text>
+          <Text style={styles.summaryLabel}>Total Schedules</Text>
         </Card>
       </View>
 
@@ -184,20 +245,31 @@ export const ParentClassesScreen: React.FC = () => {
             <Text style={styles.classTutor}>
               with {cls.tutor?.user?.name || cls.tutor_name || 'Tutor'}
             </Text>
-            {cls.schedules?.map((sched, i) => (
-              <View key={i} style={styles.scheduleRow}>
-                <Icon name="clock" size={12} color={colors.textSecondary} />
-                <Text style={styles.scheduleText}>{formatScheduleLine(sched)}</Text>
-              </View>
-            ))}
-            <TouchableOpacity
-              style={styles.viewDetailsButton}
-              onPress={() => openClassDetails(cls)}
-              activeOpacity={0.7}
-            >
-              <Icon name="eye" size={16} color={colors.textInverse} />
-              <Text style={styles.viewDetailsButtonText}>View Class Details</Text>
-            </TouchableOpacity>
+            <View style={styles.scheduleRow}>
+              <Icon name="calendar" size={12} color={colors.textSecondary} />
+              <Text style={styles.scheduleText}>
+                Total schedules: {countClassSchedulesForClass(cls)}
+              </Text>
+            </View>
+
+            <View style={styles.cardActionsRow}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.actionButtonOutline]}
+                onPress={() => openSessionsModal(cls)}
+                activeOpacity={0.7}
+              >
+                <Icon name="calendar" size={16} color={colors.secondary} />
+                <Text style={[styles.actionButtonText, styles.actionButtonTextOutline]}>View Sessions</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.actionButtonPrimary]}
+                onPress={() => openClassDetails(cls)}
+                activeOpacity={0.7}
+              >
+                <Icon name="eye" size={16} color={colors.textInverse} />
+                <Text style={styles.actionButtonText}>Details</Text>
+              </TouchableOpacity>
+            </View>
           </Card>
         ))}
       </View>
@@ -247,12 +319,18 @@ export const ParentClassesScreen: React.FC = () => {
                   <Card variant="outlined" style={styles.detailCard}>
                     <Icon name="clock" size={20} color={colors.primary} />
                     <View style={styles.detailCardContent}>
-                      <Text style={styles.detailLabel}>Schedule</Text>
-                      {selectedClass.schedules?.map((s, i) => (
-                        <Text key={i} style={styles.detailValue}>
-                          {formatScheduleLine(s)}
-                        </Text>
-                      ))}
+                      <Text style={styles.detailLabel}>Upcoming Sessions</Text>
+                      {(() => {
+                        const upcoming = getUpcomingSessions(selectedClass as any);
+                        if (upcoming.length === 0) {
+                          return <Text style={styles.detailValue}>No upcoming sessions</Text>;
+                        }
+                        return upcoming.slice(0, 10).map((s, i) => (
+                          <Text key={i} style={styles.detailValue}>
+                            {formatSessionDate(s.date)} • {formatTimeRange(s.start_time, s.end_time)}{s.location ? ` • ${s.location}` : ''}
+                          </Text>
+                        ));
+                      })()}
                       <Text style={styles.detailSubtext}>
                         Duration: {selectedClass.duration || 'N/A'}
                       </Text>
@@ -332,6 +410,66 @@ export const ParentClassesScreen: React.FC = () => {
                 </TouchableOpacity>
               </View>
             )}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Class Sessions Modal (only this class sessions) */}
+      <Modal visible={showSessionsModal} transparent animationType="slide">
+        <Pressable style={styles.modalOverlay} onPress={closeSessionsModal}>
+          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle} numberOfLines={1}>
+                {sessionsClass?.name || 'Sessions'}
+              </Text>
+              <TouchableOpacity onPress={closeSessionsModal} style={styles.closeButton}>
+                <Icon name="x" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalSubtitle}>
+              Upcoming sessions for this class
+            </Text>
+
+            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+              {sessionsList.length > 0 ? (
+                sessionsList.map((s: any) => (
+                  <Card key={s.id || `${s.date}-${s.start_time}`} variant="outlined" style={styles.sessionItemCard}>
+                    <View style={styles.sessionItemRow}>
+                      <Icon name="calendar" size={18} color={colors.primary} />
+                      <Text style={styles.sessionItemTitle} numberOfLines={2}>
+                        {s.subject || sessionsClass?.name || 'Session'}
+                      </Text>
+                    </View>
+                    <View style={styles.sessionMetaRow}>
+                      <Icon name="clock" size={14} color={colors.textSecondary} />
+                      <Text style={styles.sessionMetaText}>
+                        {formatSessionDate(s.date)} • {formatTimeRange(s.start_time, s.end_time) || '—'}
+                      </Text>
+                    </View>
+                    {!!s.location && (
+                      <View style={styles.sessionMetaRow}>
+                        <Icon name="map-pin" size={14} color={colors.textSecondary} />
+                        <Text style={styles.sessionMetaText} numberOfLines={2}>
+                          {s.location}
+                        </Text>
+                      </View>
+                    )}
+                    {!!s.status && (
+                      <View style={styles.sessionMetaRow}>
+                        <Icon name="info" size={14} color={colors.textSecondary} />
+                        <Text style={styles.sessionMetaText}>
+                          Status: {String(s.status)}
+                        </Text>
+                      </View>
+                    )}
+                  </Card>
+                ))
+              ) : (
+                <Card variant="outlined" style={styles.emptyCard}>
+                  <Text style={styles.emptyText}>No upcoming sessions</Text>
+                </Card>
+              )}
+            </ScrollView>
           </Pressable>
         </Pressable>
       </Modal>
@@ -513,6 +651,38 @@ const styles = StyleSheet.create({
     color: colors.text,
     includeFontPadding: false,
   },
+  cardActionsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.lg,
+    gap: spacing.sm,
+  },
+  actionButtonPrimary: {
+    backgroundColor: colors.secondary,
+  },
+  actionButtonOutline: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.secondary,
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textInverse,
+    includeFontPadding: false,
+  },
+  actionButtonTextOutline: {
+    color: colors.secondary,
+  },
   viewDetailsButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -597,6 +767,35 @@ const styles = StyleSheet.create({
   },
   modalScroll: {
     maxHeight: 400,
+  },
+  sessionItemCard: {
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  sessionItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  sessionItemTitle: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text,
+    includeFontPadding: false,
+  },
+  sessionMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  sessionMetaText: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.textSecondary,
+    includeFontPadding: false,
   },
   detailCard: {
     flexDirection: 'row',

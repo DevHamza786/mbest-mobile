@@ -31,7 +31,7 @@ export const ParentBillingScreen: React.FC = () => {
   const { token } = useAuthStore();
   const { selectedChild, selectedChildId } = useParentStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [invoiceFilter, setInvoiceFilter] = useState('All Invoices');
+  const [invoiceFilter, setInvoiceFilter] = useState<'all' | 'approved' | 'pending'>('all');
 
   const { data: dashboardData } = useQuery({
     queryKey: ['parentDashboard'],
@@ -47,8 +47,8 @@ export const ParentBillingScreen: React.FC = () => {
     : selectedChild || activeChildFromApi;
 
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
-    queryKey: ['parentInvoices'],
-    queryFn: () => parentService.getInvoices(),
+    queryKey: ['parentPayments'],
+    queryFn: () => parentService.getPayments(),
     enabled: !!token,
   });
 
@@ -68,35 +68,42 @@ export const ParentBillingScreen: React.FC = () => {
   }
 
   const responseData = data?.data;
-  const invoicesRaw = Array.isArray(responseData)
+  const paymentsRaw = Array.isArray(responseData)
     ? responseData
     : Array.isArray((responseData as any)?.data)
       ? (responseData as any).data
       : [];
-  const invoices: any[] = Array.isArray(invoicesRaw) ? invoicesRaw : [];
+  const payments: any[] = Array.isArray(paymentsRaw) ? paymentsRaw : [];
 
-  const stats = (responseData as any)?.stats ?? {};
-  const totalPaid = stats.total_paid ?? invoices
-    .filter((i: any) => String(i.status || '').toLowerCase() === 'paid')
-    .reduce((s: number, i: any) => s + (Number(i.amount) || 0), 0);
-  const pendingAmount = stats.pending ?? invoices
-    .filter((i: any) => String(i.status || '').toLowerCase() === 'pending')
-    .reduce((s: number, i: any) => s + (Number(i.amount) || 0), 0);
-  const overdueAmount = stats.overdue ?? invoices
-    .filter((i: any) => {
-      const status = String(i.status || '').toLowerCase();
-      const due = new Date(i.due_date || 0);
-      return status === 'overdue' || (status === 'pending' && due < new Date());
+  const totalApproved = payments
+    .filter((p: any) => String(p.status || '').toLowerCase() === 'approved')
+    .reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0);
+  const pendingAmount = payments
+    .filter((p: any) => String(p.status || '').toLowerCase() === 'pending')
+    .reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0);
+  const rejectedAmount = payments
+    .filter((p: any) => String(p.status || '').toLowerCase() === 'rejected')
+    .reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0);
+
+  const filteredPayments = payments
+    .filter((p: any) => {
+      const status = String(p.status || '').toLowerCase();
+      if (invoiceFilter === 'all') return true;
+      return status === invoiceFilter;
     })
-    .reduce((s: number, i: any) => s + (Number(i.amount) || 0), 0);
-
-  const filteredInvoices = invoices.filter((i: any) => {
-    const q = searchQuery.toLowerCase();
-    if (!q) return true;
-    const num = (i.invoice_number || '').toString().toLowerCase();
-    const child = (i.child_name || '').toLowerCase();
-    return num.includes(q) || child.includes(q);
-  });
+    .filter((p: any) => {
+      const q = searchQuery.toLowerCase();
+      if (!q) return true;
+      const pkg = (p.package?.name || '').toString().toLowerCase();
+      const status = (p.status || '').toString().toLowerCase();
+      const notes = (p.admin_notes || '').toString().toLowerCase();
+      return (
+        pkg.includes(q) ||
+        status.includes(q) ||
+        notes.includes(q) ||
+        String(p.amount || '').includes(q)
+      );
+    });
 
   return (
     <ScrollView
@@ -109,12 +116,12 @@ export const ParentBillingScreen: React.FC = () => {
       {/* Summary Cards */}
       <View style={styles.statsGrid}>
         <Card variant="elevated" style={styles.statCard}>
-          <Text style={styles.statLabel}>Total Paid</Text>
+          <Text style={styles.statLabel}>Total Approved</Text>
           <Text style={[styles.statValue, { color: colors.success }]}>
-            ${totalPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            ${totalApproved.toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </Text>
           <Text style={styles.statSubtext}>
-            {invoices.filter((i: any) => String(i.status || '').toLowerCase() === 'paid').length} invoices
+            {payments.filter((p: any) => String(p.status || '').toLowerCase() === 'approved').length} payments
           </Text>
         </Card>
         <Card variant="elevated" style={styles.statCard}>
@@ -123,25 +130,21 @@ export const ParentBillingScreen: React.FC = () => {
             ${pendingAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </Text>
           <Text style={styles.statSubtext}>
-            {invoices.filter((i: any) => String(i.status || '').toLowerCase() === 'pending').length} invoices
+            {payments.filter((p: any) => String(p.status || '').toLowerCase() === 'pending').length} payments
           </Text>
         </Card>
         <Card variant="elevated" style={styles.statCard}>
-          <Text style={styles.statLabel}>Overdue Amount</Text>
+          <Text style={styles.statLabel}>Rejected Amount</Text>
           <Text style={[styles.statValue, { color: colors.error }]}>
-            ${overdueAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            ${rejectedAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </Text>
           <Text style={styles.statSubtext}>
-            {invoices.filter((i: any) => {
-              const s = String(i.status || '').toLowerCase();
-              const due = new Date(i.due_date || 0);
-              return s === 'overdue' || (s === 'pending' && due < new Date());
-            }).length} overdue invoices
+            {payments.filter((p: any) => String(p.status || '').toLowerCase() === 'rejected').length} rejected payments
           </Text>
         </Card>
         <Card variant="elevated" style={styles.statCard}>
-          <Text style={styles.statLabel}>Total Invoices</Text>
-          <Text style={styles.statValue}>{invoices.length}</Text>
+          <Text style={styles.statLabel}>Total Payments</Text>
+          <Text style={styles.statValue}>{payments.length}</Text>
           <Text style={styles.statSubtext}>All time</Text>
         </Card>
       </View>
@@ -152,75 +155,96 @@ export const ParentBillingScreen: React.FC = () => {
           <Icon name="search" size={18} color={colors.textSecondary} />
           <TextInput
             style={styles.searchTextInput}
-            placeholder="Search invoices..."
+            placeholder="Search payments..."
             placeholderTextColor={colors.textTertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
         </View>
-        <TouchableOpacity style={styles.filterChip} activeOpacity={0.7}>
-          <Text style={styles.filterChipText}>{invoiceFilter}</Text>
-          <Icon name="chevron-right" size={14} color={colors.textSecondary} />
-        </TouchableOpacity>
+        <View style={styles.filterChipsRow}>
+          <TouchableOpacity
+            style={[styles.filterChip, invoiceFilter === 'all' && styles.filterChipActive]}
+            activeOpacity={0.8}
+            onPress={() => setInvoiceFilter('all')}
+          >
+            <Text style={[styles.filterChipText, invoiceFilter === 'all' && styles.filterChipTextActive]}>All</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterChip, invoiceFilter === 'approved' && styles.filterChipActive]}
+            activeOpacity={0.8}
+            onPress={() => setInvoiceFilter('approved')}
+          >
+            <Text style={[styles.filterChipText, invoiceFilter === 'approved' && styles.filterChipTextActive]}>Approved</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterChip, invoiceFilter === 'pending' && styles.filterChipActive]}
+            activeOpacity={0.8}
+            onPress={() => setInvoiceFilter('pending')}
+          >
+            <Text style={[styles.filterChipText, invoiceFilter === 'pending' && styles.filterChipTextActive]}>Pending</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Invoice History */}
       <View style={styles.invoiceSection}>
-        <Text style={styles.sectionTitle}>Invoice History</Text>
-        <Text style={styles.sectionSubtitle}>View and manage your billing history</Text>
+        <Text style={styles.sectionTitle}>Payment History</Text>
+        <Text style={styles.sectionSubtitle}>View your uploaded payment slips and status</Text>
 
-        {filteredInvoices.length > 0 ? (
-          <View style={styles.table}>
-            <View style={styles.tableHeader}>
-              <Text style={[styles.tableHeaderCell, styles.colInvoice]}>Invoice #</Text>
-              <Text style={[styles.tableHeaderCell, styles.colPeriod]}>Period</Text>
-              <Text style={[styles.tableHeaderCell, styles.colAmount]}>Amount</Text>
-              <Text style={[styles.tableHeaderCell, styles.colStatus]}>Status</Text>
-              <Text style={[styles.tableHeaderCell, styles.colDate]}>Issued On</Text>
-              <Text style={[styles.tableHeaderCell, styles.colDate]}>Due Date</Text>
-            </View>
-            {filteredInvoices.map((item: any) => {
-              const status = item.status || '—';
-              const statusLower = String(status).toLowerCase();
-              const statusColor =
-                statusLower === 'paid' ? colors.success
-                : statusLower === 'overdue' ? colors.error
-                : colors.warning;
-              return (
-                <View key={item.id} style={styles.tableRow}>
-                  <Text style={[styles.tableCell, styles.colInvoice]} numberOfLines={1}>
-                    {item.invoice_number || '—'}
-                  </Text>
-                  <Text style={[styles.tableCell, styles.colPeriod]} numberOfLines={1}>
-                    {item.period || item.child_name || '—'}
-                  </Text>
-                  <Text style={[styles.tableCell, styles.colAmount]} numberOfLines={1}>
-                    ${Number(item.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </Text>
-                  <View style={[styles.colStatus, styles.statusCell]}>
-                    <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
-                      <Text style={styles.statusBadgeText}>{status}</Text>
+        {filteredPayments.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.table}>
+              <View style={styles.tableHeader}>
+                <Text style={[styles.tableHeaderCell, styles.colInvoice]}>Package</Text>
+                <Text style={[styles.tableHeaderCell, styles.colPeriod]}>Notes</Text>
+                <Text style={[styles.tableHeaderCell, styles.colAmount]}>Amount</Text>
+                <Text style={[styles.tableHeaderCell, styles.colStatus]}>Status</Text>
+                <Text style={[styles.tableHeaderCell, styles.colDate]}>Approved By</Text>
+                <Text style={[styles.tableHeaderCell, styles.colDate]}>Approved At</Text>
+              </View>
+              {filteredPayments.map((item: any) => {
+                const status = item.status || '—';
+                const statusLower = String(status).toLowerCase();
+                const statusColor =
+                  statusLower === 'approved' ? colors.success
+                  : statusLower === 'rejected' ? colors.error
+                  : colors.warning;
+                const adminNotes = String(item.admin_notes || '').trim();
+                const packageName = item.package?.name || `#${item.package_id ?? '—'}`;
+                return (
+                  <View key={item.id} style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.colInvoice]} numberOfLines={1}>
+                      {packageName}
+                    </Text>
+                    <Text style={[styles.tableCell, styles.colPeriod]} numberOfLines={1}>
+                      {adminNotes || '—'}
+                    </Text>
+                    <Text style={[styles.tableCell, styles.colAmount]} numberOfLines={1}>
+                      ${Number(item.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </Text>
+                    <View style={[styles.colStatus, styles.statusCell]}>
+                      <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
+                        <Text style={styles.statusBadgeText}>{status}</Text>
+                      </View>
                     </View>
+                    <Text style={[styles.tableCell, styles.colDate]} numberOfLines={1}>
+                      {item.approver?.name || (item.approved_by ? `#${item.approved_by}` : '—')}
+                    </Text>
+                    <Text style={[styles.tableCell, styles.colDate]} numberOfLines={1}>
+                      {item.approved_at
+                        ? new Date(item.approved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                        : '—'}
+                    </Text>
                   </View>
-                  <Text style={[styles.tableCell, styles.colDate]} numberOfLines={1}>
-                    {item.issued_at || item.created_at
-                      ? new Date(item.issued_at || item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                      : '—'}
-                  </Text>
-                  <Text style={[styles.tableCell, styles.colDate]} numberOfLines={1}>
-                    {item.due_date
-                      ? new Date(item.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                      : '—'}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
+                );
+              })}
+            </View>
+          </ScrollView>
         ) : (
           <Card variant="outlined" style={styles.emptyCard}>
             <Icon name="credit-card" size={80} color={colors.textTertiary} style={{ opacity: 0.4, marginBottom: spacing.lg }} />
-            <Text style={styles.emptyTitle}>No Invoices Found</Text>
-            <Text style={styles.emptyText}>No invoices have been generated yet.</Text>
+            <Text style={styles.emptyTitle}>No Payments Found</Text>
+            <Text style={styles.emptyText}>No payment slips have been uploaded yet.</Text>
           </Card>
         )}
       </View>
@@ -346,6 +370,10 @@ const styles = StyleSheet.create({
     color: colors.text,
     includeFontPadding: false,
   },
+  filterChipsRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -357,10 +385,18 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     gap: spacing.xs,
   },
+  filterChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
   filterChipText: {
     fontSize: 14,
     color: colors.text,
     includeFontPadding: false,
+  },
+  filterChipTextActive: {
+    color: colors.textInverse,
+    fontWeight: '700',
   },
   invoiceSection: {
     marginBottom: spacing.xl,
@@ -384,6 +420,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
+    minWidth: 480,
   },
   tableHeader: {
     flexDirection: 'row',
@@ -411,11 +448,11 @@ const styles = StyleSheet.create({
     color: colors.text,
     includeFontPadding: false,
   },
-  colInvoice: { flex: 0.9, minWidth: 0 },
-  colPeriod: { flex: 1, minWidth: 0 },
-  colAmount: { flex: 0.8, minWidth: 0 },
-  colStatus: { flex: 0.8, minWidth: 0 },
-  colDate: { flex: 0.9, minWidth: 0 },
+  colInvoice: { flex: 0.3, minWidth: 0 },
+  colPeriod: { flex: 0.2, minWidth: 0 },
+  colAmount: { flex: 0.2, minWidth: 0 },
+  colStatus: { flex: 0.2, minWidth: 0 },
+  colDate: { flex: 0.3, minWidth: 0 },
   statusCell: {
     justifyContent: 'center',
   },

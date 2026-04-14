@@ -135,6 +135,33 @@ export interface Invoice {
   child_name: string;
 }
 
+export interface ParentPayment {
+  id: number;
+  parent_id: number;
+  package_id: number;
+  amount: string | number;
+  payment_slip_path?: string | null;
+  payment_slip_url?: string | null;
+  status: string;
+  admin_notes?: string | null;
+  approved_by?: number | null;
+  approved_at?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  package?: {
+    id: number;
+    name: string;
+    price: string | number;
+    description?: string | null;
+    student_limit?: number | string | null;
+    allows_one_on_one?: boolean | null;
+    bank_details?: string | null;
+    is_active?: boolean | null;
+    created_at?: string | null;
+    updated_at?: string | null;
+  };
+}
+
 export const parentService = {
   // Dashboard
   getDashboard: async (): Promise<ApiResponse<ParentDashboardData>> => {
@@ -175,8 +202,17 @@ export const parentService = {
   },
 
   // Billing
-  getInvoices: async (): Promise<ApiResponse<Invoice[]>> => {
-    const response = await apiClient.get<ApiResponse<Invoice[]>>('/parent/billing/invoices');
+  // Legacy: older builds called this "invoices". Backend now exposes payments.
+  // Keep the method name for backward compatibility but point it to payments.
+  getInvoices: async (): Promise<ApiResponse<any>> => {
+    const response = await apiClient.get<ApiResponse<any>>('/parent/billing/payments');
+    return response.data;
+  },
+
+  getPayments: async (): Promise<ApiResponse<{ data: ParentPayment[] } | ParentPayment[]>> => {
+    const response = await apiClient.get<ApiResponse<{ data: ParentPayment[] } | ParentPayment[]>>(
+      '/parent/billing/payments'
+    );
     return response.data;
   },
 

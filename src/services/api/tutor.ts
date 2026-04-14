@@ -29,6 +29,20 @@ export interface TutorDashboardData {
   }>;
 }
 
+export interface TutorProfileSettings {
+  phone?: string;
+  address?: string;
+  date_of_birth?: string;
+  hourly_rate?: string | number;
+  years_experience?: string | number;
+  wwcc_number?: string;
+  wwcc_expiry_date?: string;
+  max_students_per_group?: string | number;
+  subjects_taught?: string[];
+  qualifications?: string[] | string;
+  bio?: string;
+}
+
 export interface Class {
   id: number;
   name: string;
@@ -368,6 +382,57 @@ export const tutorService = {
   getDashboard: async (): Promise<ApiResponse<TutorDashboardData>> => {
     const response = await apiClient.get<ApiResponse<TutorDashboardData>>('/tutor/dashboard');
     return response.data;
+  },
+
+  // Tutor Profile (tutor_profile_incomplete flow)
+  getProfileSettings: async (): Promise<ApiResponse<TutorProfileSettings>> => {
+    try {
+      const response = await apiClient.get<ApiResponse<TutorProfileSettings>>('/tutor/profile/settings');
+      return response.data;
+    } catch (error: any) {
+      // Some backends expose this under /profile/settings instead.
+      if (error?.response?.status === 404) {
+        const fallback = await apiClient.get<ApiResponse<TutorProfileSettings>>('/profile/settings');
+        return fallback.data;
+      }
+      throw error;
+    }
+  },
+
+  updateProfileSettings: async (
+    data: Partial<TutorProfileSettings>,
+  ): Promise<ApiResponse<TutorProfileSettings>> => {
+    try {
+      const response = await apiClient.put<ApiResponse<TutorProfileSettings>>(
+        '/tutor/profile/settings',
+        data,
+      );
+      return response.data;
+    } catch (error: any) {
+      const status = error?.response?.status;
+      // Some backends expose this under /profile/settings
+      if (status === 404) {
+        // Try PUT first; if not supported, try POST.
+        try {
+          const fallback = await apiClient.put<ApiResponse<TutorProfileSettings>>('/profile/settings', data);
+          return fallback.data;
+        } catch (fallbackErr: any) {
+          const fallbackStatus = fallbackErr?.response?.status;
+          if (fallbackStatus === 405) {
+            const fallbackPost = await apiClient.post<ApiResponse<TutorProfileSettings>>('/profile/settings', data);
+            return fallbackPost.data;
+          }
+          throw fallbackErr;
+        }
+      }
+
+      // If PUT isn't allowed, some backends expect POST.
+      if (status === 405) {
+        const post = await apiClient.post<ApiResponse<TutorProfileSettings>>('/tutor/profile/settings', data);
+        return post.data;
+      }
+      throw error;
+    }
   },
 
   // Classes

@@ -43,6 +43,7 @@ import {
   CreditCard,
   BarChart,
   TrendingUp,
+  TrendingDown,
   AlertCircle,
   Check,
   X,
@@ -109,6 +110,7 @@ export type IconName =
   | 'credit-card'
   | 'bar-chart'
   | 'trending-up'
+  | 'trending-down'
   | 'alert-circle'
   | 'check'
   | 'x'
@@ -180,6 +182,7 @@ const iconMap: Record<IconName, React.ComponentType<any>> = {
   'credit-card': CreditCard,
   'bar-chart': BarChart,
   'trending-up': TrendingUp,
+  'trending-down': TrendingDown,
   'alert-circle': AlertCircle,
   'check': Check,
   'x': X,

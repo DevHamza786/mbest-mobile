@@ -72,6 +72,33 @@ export const TutorDashboardScreen: React.FC = () => {
   }
 
   if (error) {
+    const errAny: any = error;
+    const status = errAny?.response?.status;
+    const data = errAny?.response?.data;
+    const msg = String(data?.message || '');
+    const redirectTo = String(data?.redirect_to || '');
+    const isTutorProfileIncomplete =
+      status === 403 &&
+      (msg.toLowerCase().includes('tutor_profile_incomplete') ||
+        redirectTo.includes('profile/settings'));
+
+    if (isTutorProfileIncomplete) {
+      return (
+        <View style={styles.container}>
+          <Header title="Complete Profile" showBack={false} showProfile={true} />
+          <Text style={styles.errorText}>
+            Your tutor profile is incomplete. Please complete it to view the dashboard.
+          </Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('TutorProfileComplete')}
+            style={styles.retryButton}
+          >
+            <Text style={styles.retryButtonText}>Complete Profile</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
     return (
       <View style={styles.container}>
         <Header title="Dashboard" showProfile />

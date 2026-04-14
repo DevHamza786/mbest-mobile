@@ -11,6 +11,7 @@ import {
   FlatList,
   TouchableOpacity,
   ScrollView,
+  RefreshControl,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { parentService } from '../../services/api/parent';
@@ -24,9 +25,17 @@ import { Icon } from '../../components/common/Icon';
 import { ParentAssignmentDetailsModal } from '../../components/common/ParentAssignmentDetailsModal';
 
 const getDaysUntilDue = (dueDate: string) => {
+  // Timezone-safe "days until due" (compare local calendar days, not exact timestamps).
+  // This fixes cases like due_date = "2026-04-14T00:00:00.000000Z" showing wrong day diff.
   const due = new Date(dueDate);
+  if (Number.isNaN(due.getTime())) return 0;
+
   const now = new Date();
-  return Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfDueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+
+  const diffMs = startOfDueDay.getTime() - startOfToday.getTime();
+  return Math.round(diffMs / (1000 * 60 * 60 * 24));
 };
 
 const getStatusDisplay = (dueDate: string, submissions: any[] = []) => {
@@ -53,7 +62,7 @@ export const ParentAssignmentsScreen: React.FC = () => {
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ['parentChildAssignments', selectedChildId],
     queryFn: () => parentService.getChildAssignments(selectedChildId!),
     enabled: !!token && !!selectedChildId,
@@ -108,6 +117,9 @@ export const ParentAssignmentsScreen: React.FC = () => {
     return (
       <View style={styles.container}>
         <Text style={styles.errorText}>Error loading assignments</Text>
+        <TouchableOpacity onPress={() => refetch()} style={styles.retryButton} activeOpacity={0.7}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -149,6 +161,7 @@ export const ParentAssignmentsScreen: React.FC = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
       >
         {/* Stats Cards */}
         <View style={styles.statsGrid}>
@@ -165,7 +178,13 @@ export const ParentAssignmentsScreen: React.FC = () => {
         </View>
 
         {/* Assignments List */}
-        <Text style={styles.listTitle}>Assignments</Text>
+        <View style={styles.listHeaderRow}>
+          <Text style={styles.listTitle}>Assignments</Text>
+          <TouchableOpacity onPress={() => refetch()} style={styles.refreshButton} activeOpacity={0.7}>
+            <Icon name="refresh-cw" size={18} color={colors.primary} />
+            <Text style={styles.refreshButtonText}>Refresh</Text>
+          </TouchableOpacity>
+        </View>
         {assignments.length === 0 ? (
           <Card variant="outlined" style={styles.emptyCard}>
             <Text style={styles.emptyText}>No assignments found</Text>
@@ -275,6 +294,30 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     includeFontPadding: false,
   },
+  listHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.md,
+  },
+  refreshButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+    includeFontPadding: false,
+  },
   assignmentCard: {
     marginBottom: spacing.md,
     padding: spacing.md,
@@ -344,6 +387,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     marginVertical: spacing.lg,
+  },
+  retryButton: {
+    backgroundColor: colors.primary,
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    alignItems: 'center',
+    marginHorizontal: spacing.lg,
+  },
+  retryButtonText: {
+    color: colors.textInverse,
+    fontSize: 16,
+    fontWeight: '600',
+    includeFontPadding: false,
   },
   emptyStateContainer: {
     flex: 1,

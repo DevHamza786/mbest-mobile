@@ -41,6 +41,7 @@ import { TutorLessonHistoryScreen } from '../screens/tutor/TutorLessonHistoryScr
 import { TutorQuestionsScreen } from '../screens/tutor/TutorQuestionsScreen';
 import { AddLessonScreen } from '../screens/tutor/AddLessonScreen';
 import { TutorResourcesScreen } from '../screens/tutor/TutorResourcesScreen';
+import { TutorProfileCompleteScreen } from '../screens/tutor/TutorProfileCompleteScreen';
 
 // Student Screens
 import { StudentDashboardScreen } from '../screens/student/StudentDashboardScreen';
@@ -223,6 +224,7 @@ const TutorNavigator = () => {
       }}
     >
       <TutorStack.Screen name="TutorTabs" component={TutorTabsNavigator} />
+      <TutorStack.Screen name="TutorProfileComplete" component={TutorProfileCompleteScreen} />
       <TutorStack.Screen name="TutorClasses" component={TutorClassesScreen} />
       <TutorStack.Screen
         name="TutorClassDetails"

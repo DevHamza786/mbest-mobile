@@ -5,6 +5,14 @@ import { useSubscriptionStore } from '../../store/subscriptionStore';
 // Base API URL - Using production URL for both development and production
 const getBaseURL = () => {
   return 'https://engine-rebuild.co.uk/mbest/public/api/v1';
+  /**
+   * Important:
+   * - On physical Android devices, `localhost` points to the phone itself, not your PC.
+   * - Postman works with `localhost` because it runs on your PC.
+   *
+   * Use your PC LAN IP so the device can reach the backend over the network.
+   */
+  // return 'http://192.168.1.106:8000/api/v1';
 };
 
 const BASE_URL = getBaseURL();
