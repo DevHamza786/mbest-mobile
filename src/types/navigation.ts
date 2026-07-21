@@ -45,6 +45,7 @@ export type TutorStackParamList = {
   TutorLessonHistory: undefined;
   TutorQuestions: undefined;
   TutorResources: undefined;
+  Conversation: { threadId: string; participantName: string };
 };
 
 export type StudentTabParamList = {

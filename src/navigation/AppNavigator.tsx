@@ -214,6 +214,17 @@ const TutorTabsNavigator = () => {
           ),
         }}
       />
+      <TutorTab.Screen
+        name="Messages"
+        component={MessagesScreen}
+        options={{
+          headerShown: false, // Use custom Header component
+          tabBarLabel: 'Chat',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="message-circle" size={size || 20} color={color} />
+          ),
+        }}
+      />
     </TutorTab.Navigator>
   );
 };
@@ -272,6 +283,11 @@ const TutorNavigator = () => {
       <TutorStack.Screen
         name="TutorResources"
         component={TutorResourcesScreen}
+      />
+      <TutorStack.Screen
+        name="Conversation"
+        component={ConversationScreen}
+        options={({ route }) => ({ headerShown: true, title: route.params.participantName })}
       />
     </TutorStack.Navigator>
   );
