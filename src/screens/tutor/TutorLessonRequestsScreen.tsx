@@ -13,6 +13,7 @@ import {
   RefreshControl,
   TextInput,
   Platform,
+  Alert,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { tutorService, type LessonRequest } from '../../services/api/tutor';
@@ -30,6 +31,7 @@ export const TutorLessonRequestsScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRequest, setSelectedRequest] = useState<LessonRequest | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [isActing, setIsActing] = useState(false);
 
   // Debounced search - hits API 500ms after user stops typing
   useEffect(() => {
@@ -54,6 +56,36 @@ export const TutorLessonRequestsScreen: React.FC = () => {
   const handleCloseDetails = () => {
     setShowDetailsModal(false);
     setSelectedRequest(null);
+  };
+
+  const handleApprove = async () => {
+    if (!selectedRequest) return;
+    try {
+      setIsActing(true);
+      await tutorService.approveLessonRequest(selectedRequest.id);
+      Alert.alert('Request Approved', 'The lesson request has been approved and the family has been notified.');
+      handleCloseDetails();
+      refetch();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to approve lesson request. Please try again.');
+    } finally {
+      setIsActing(false);
+    }
+  };
+
+  const handleDecline = async () => {
+    if (!selectedRequest) return;
+    try {
+      setIsActing(true);
+      await tutorService.declineLessonRequest(selectedRequest.id);
+      Alert.alert('Request Declined', 'The lesson request has been declined.');
+      handleCloseDetails();
+      refetch();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to decline lesson request. Please try again.');
+    } finally {
+      setIsActing(false);
+    }
   };
 
   if (isLoading) {
@@ -371,6 +403,29 @@ export const TutorLessonRequestsScreen: React.FC = () => {
                 </Text>
               </View>
             </View>
+
+            {selectedRequest.status === 'pending' && (
+              <View style={styles.actionRow}>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.declineButton]}
+                  onPress={handleDecline}
+                  disabled={isActing}
+                >
+                  <Text style={styles.declineButtonText}>
+                    {isActing ? 'Please wait…' : 'Decline'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.approveButton]}
+                  onPress={handleApprove}
+                  disabled={isActing}
+                >
+                  <Text style={styles.approveButtonText}>
+                    {isActing ? 'Please wait…' : 'Approve'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </Modal>
       )}
@@ -609,5 +664,34 @@ const styles = StyleSheet.create({
     color: colors.text,
     lineHeight: 20,
     includeFontPadding: false,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: spacing.sm,
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+  },
+  declineButton: {
+    backgroundColor: colors.error + '15',
+    borderWidth: 1,
+    borderColor: colors.error,
+  },
+  declineButtonText: {
+    color: colors.error,
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  approveButton: {
+    backgroundColor: colors.success,
+  },
+  approveButtonText: {
+    color: colors.textInverse,
+    fontWeight: '600',
+    fontSize: 15,
   },
 });
