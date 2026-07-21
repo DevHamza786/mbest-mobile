@@ -3,7 +3,7 @@
  * Review and manage incoming lesson requests from families
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -32,6 +32,11 @@ export const TutorLessonRequestsScreen: React.FC = () => {
   const [selectedRequest, setSelectedRequest] = useState<LessonRequest | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [isActing, setIsActing] = useState(false);
+  // Synchronous re-entrancy guard: `isActing` state disables the buttons for the UI,
+  // but a state update isn't guaranteed to land before a fast double-tap's second
+  // event reaches these handlers. A ref is read/written synchronously, so it closes
+  // that window even when the state update hasn't flushed yet.
+  const isActingRef = useRef(false);
 
   // Debounced search - hits API 500ms after user stops typing
   useEffect(() => {
@@ -59,7 +64,8 @@ export const TutorLessonRequestsScreen: React.FC = () => {
   };
 
   const handleApprove = async () => {
-    if (!selectedRequest) return;
+    if (!selectedRequest || isActingRef.current) return;
+    isActingRef.current = true;
     try {
       setIsActing(true);
       await tutorService.approveLessonRequest(selectedRequest.id);
@@ -69,12 +75,14 @@ export const TutorLessonRequestsScreen: React.FC = () => {
     } catch (error) {
       Alert.alert('Error', 'Failed to approve lesson request. Please try again.');
     } finally {
+      isActingRef.current = false;
       setIsActing(false);
     }
   };
 
   const handleDecline = async () => {
-    if (!selectedRequest) return;
+    if (!selectedRequest || isActingRef.current) return;
+    isActingRef.current = true;
     try {
       setIsActing(true);
       await tutorService.declineLessonRequest(selectedRequest.id);
@@ -84,6 +92,7 @@ export const TutorLessonRequestsScreen: React.FC = () => {
     } catch (error) {
       Alert.alert('Error', 'Failed to decline lesson request. Please try again.');
     } finally {
+      isActingRef.current = false;
       setIsActing(false);
     }
   };
