@@ -204,6 +204,17 @@ const TutorTabsNavigator = () => {
         }}
       />
       <TutorTab.Screen
+        name="Messages"
+        component={MessagesScreen}
+        options={{
+          title: 'Messages',
+          tabBarLabel: 'Chat',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="message-circle" size={size || 20} color={color} />
+          ),
+        }}
+      />
+      <TutorTab.Screen
         name="TutorMore"
         component={TutorMoreScreen}
         options={{
@@ -211,17 +222,6 @@ const TutorTabsNavigator = () => {
           tabBarLabel: 'More',
           tabBarIcon: ({ color, size }) => (
             <Icon name="more-vertical" size={size || 20} color={color} />
-          ),
-        }}
-      />
-      <TutorTab.Screen
-        name="Messages"
-        component={MessagesScreen}
-        options={{
-          headerShown: false, // Use custom Header component
-          tabBarLabel: 'Chat',
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="message-circle" size={size || 20} color={color} />
           ),
         }}
       />
