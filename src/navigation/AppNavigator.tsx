@@ -66,6 +66,7 @@ import { UpgradePaymentScreen } from '../screens/parent/UpgradePaymentScreen';
 
 // Common Screens
 import { MessagesScreen } from '../screens/common/MessagesScreen';
+import { ConversationScreen } from '../screens/common/ConversationScreen';
 import { ProfileScreen } from '../screens/common/ProfileScreen';
 import { SettingsScreen } from '../screens/common/SettingsScreen';
 import { ParentGate } from '../components/ParentGate';
@@ -565,6 +566,17 @@ const ParentTabsNavigator = () => {
           ),
         }}
       />
+      <ParentTab.Screen
+        name="Messages"
+        component={MessagesScreen}
+        options={{
+          title: 'Messages',
+          tabBarLabel: 'Chat',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="message-circle" size={size || 20} color={color} />
+          ),
+        }}
+      />
     </ParentTab.Navigator>
   );
 };
@@ -594,6 +606,11 @@ const ParentNavigator = () => {
         name="UpgradePayment"
         component={UpgradePaymentScreen}
         options={{ headerShown: true, title: 'Submit Payment' }}
+      />
+      <ParentStack.Screen
+        name="Conversation"
+        component={ConversationScreen}
+        options={({ route }) => ({ headerShown: true, title: route.params.participantName })}
       />
     </ParentStack.Navigator>
   );
