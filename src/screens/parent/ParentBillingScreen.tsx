@@ -14,6 +14,11 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigation } from '@react-navigation/native';
+import type { NavigationProp } from '@react-navigation/native';
+import type { CompositeNavigationProp } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
+import type { ParentTabParamList, ParentStackParamList } from '../../types/navigation';
 import { parentService } from '../../services/api/parent';
 import { useAuthStore } from '../../store/authStore';
 import { useParentStore } from '../../store/parentStore';
@@ -22,12 +27,19 @@ import { spacing, borderRadius, shadows } from '../../constants/spacing';
 import { Card } from '../../components/common/Card';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { Icon } from '../../components/common/Icon';
+import { Button } from '../../components/common/Button';
+
+type NavProp = CompositeNavigationProp<
+  NavigationProp<ParentTabParamList>,
+  StackNavigationProp<ParentStackParamList>
+>;
 
 const getChildName = (child: { name?: string; user?: { name?: string }; student?: { user?: { name?: string } } }) => {
   return child.name || child.user?.name || child.student?.user?.name || 'Student';
 };
 
 export const ParentBillingScreen: React.FC = () => {
+  const navigation = useNavigation<NavProp>();
   const { token } = useAuthStore();
   const { selectedChild, selectedChildId } = useParentStore();
   const [searchQuery, setSearchQuery] = useState('');
@@ -184,6 +196,11 @@ export const ParentBillingScreen: React.FC = () => {
             <Text style={[styles.filterChipText, invoiceFilter === 'pending' && styles.filterChipTextActive]}>Pending</Text>
           </TouchableOpacity>
         </View>
+      </View>
+
+      {/* Upgrade Plan Button */}
+      <View style={styles.upgradeButtonContainer}>
+        <Button title="Upgrade Plan" onPress={() => navigation.navigate('UpgradePackage')} />
       </View>
 
       {/* Invoice History */}
@@ -373,6 +390,9 @@ const styles = StyleSheet.create({
   filterChipsRow: {
     flexDirection: 'row',
     gap: spacing.xs,
+  },
+  upgradeButtonContainer: {
+    marginBottom: spacing.lg,
   },
   filterChip: {
     flexDirection: 'row',
