@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
+import type { ParentStackParamList } from '../../types/navigation';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
@@ -26,8 +28,10 @@ import { colors } from '../../constants/colors';
 import { spacing, borderRadius, shadows } from '../../constants/spacing';
 import { useAuthStore } from '../../store/authStore';
 
+type NavProp = StackNavigationProp<ParentStackParamList, 'AddStudent'>;
+
 export const AddStudentScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavProp>();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { token } = useAuthStore();
@@ -88,6 +92,17 @@ export const AddStudentScreen: React.FC = () => {
     },
     onError: (error: any) => {
       const errorData = error.response?.data;
+      if (errorData?.limit_reached) {
+        Alert.alert(
+          "You've reached your plan's student limit",
+          'Upgrade your package to add more students.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Upgrade Plan', onPress: () => navigation.navigate('UpgradePackage') },
+          ]
+        );
+        return;
+      }
       if (errorData?.errors) {
         const fieldErrors: Record<string, string> = {};
         Object.keys(errorData.errors).forEach((key) => {
