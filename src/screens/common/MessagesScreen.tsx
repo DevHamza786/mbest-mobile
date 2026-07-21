@@ -6,6 +6,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import type { NavigationProp, CompositeNavigationProp } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { useQuery } from '@tanstack/react-query';
 import { colors } from '../../constants/colors';
@@ -14,9 +15,12 @@ import { Card } from '../../components/common/Card';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { messagesService, type MessageThread } from '../../services/api/messages';
 import { useAuthStore } from '../../store/authStore';
-import type { ParentStackParamList } from '../../types/navigation';
+import type { ParentTabParamList, ParentStackParamList } from '../../types/navigation';
 
-type NavProp = StackNavigationProp<ParentStackParamList, 'ParentTabs'>;
+type NavProp = CompositeNavigationProp<
+  NavigationProp<ParentTabParamList>,
+  StackNavigationProp<ParentStackParamList>
+>;
 
 const THREAD_POLL_INTERVAL_MS = 15000;
 
