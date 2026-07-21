@@ -86,6 +86,8 @@ export type ParentTabParamList = {
 export type ParentStackParamList = {
   ParentTabs: NavigatorScreenParams<ParentTabParamList>;
   AddStudent: undefined;
+  UpgradePackage: undefined;
+  UpgradePayment: { packageId: number; packageName: string; packagePrice: string };
 };
 
 declare global {

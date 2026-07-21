@@ -61,6 +61,8 @@ import { ParentGradesScreen } from '../screens/parent/ParentGradesScreen';
 import { ParentAttendanceScreen } from '../screens/parent/ParentAttendanceScreen';
 import { ParentBillingScreen } from '../screens/parent/ParentBillingScreen';
 import { AddStudentScreen } from '../screens/parent/AddStudentScreen';
+import { UpgradePackageScreen } from '../screens/parent/UpgradePackageScreen';
+import { UpgradePaymentScreen } from '../screens/parent/UpgradePaymentScreen';
 
 // Common Screens
 import { MessagesScreen } from '../screens/common/MessagesScreen';
@@ -582,6 +584,16 @@ const ParentNavigator = () => {
         options={{
           headerShown: false,
         }}
+      />
+      <ParentStack.Screen
+        name="UpgradePackage"
+        component={UpgradePackageScreen}
+        options={{ headerShown: true, title: 'Upgrade Package' }}
+      />
+      <ParentStack.Screen
+        name="UpgradePayment"
+        component={UpgradePaymentScreen}
+        options={{ headerShown: true, title: 'Submit Payment' }}
       />
     </ParentStack.Navigator>
   );
