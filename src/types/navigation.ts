@@ -88,6 +88,7 @@ export type ParentStackParamList = {
   AddStudent: undefined;
   UpgradePackage: undefined;
   UpgradePayment: { packageId: number; packageName: string; packagePrice: string };
+  Conversation: { threadId: string; participantName: string };
 };
 
 declare global {
