@@ -72,6 +72,10 @@ export const TutorSessionDetailsScreen: React.FC = () => {
   });
 
   const handleMarkAttendance = () => {
+    if (data?.data?.attendance_marked) {
+      Alert.alert('Already Marked', 'Attendance has already been recorded for this session.');
+      return;
+    }
     if (!data?.data?.students || data.data.students.length === 0) {
       Alert.alert('Error', 'No students in this session');
       return;
@@ -240,10 +244,11 @@ export const TutorSessionDetailsScreen: React.FC = () => {
         {/* Actions */}
         <View style={styles.actions}>
           <Button
-            title="Mark Attendance"
+            title={data?.data?.attendance_marked ? 'Attendance Marked' : 'Mark Attendance'}
             onPress={handleMarkAttendance}
             variant="primary"
             loading={attendanceMutation.isPending}
+            disabled={!!data?.data?.attendance_marked}
             style={styles.actionButton}
           />
         </View>
