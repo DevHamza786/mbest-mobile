@@ -18,6 +18,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
+import { pick, types } from '@react-native-documents/picker';
 import { tutorService } from '../../services/api/tutor';
 import { useAuthStore } from '../../store/authStore';
 import { colors } from '../../constants/colors';
@@ -489,6 +490,32 @@ const CreateAssignmentModal: React.FC<CreateAssignmentModalProps> = ({
   const [showSubmissionTypeDropdown, setShowSubmissionTypeDropdown] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [errors, setErrors] = useState<any>({});
+  const [materials, setMaterials] = useState<Array<{ uri: string; type: string; name: string }>>([]);
+
+  const handlePickMaterials = async () => {
+    try {
+      const result = await pick({
+        type: [types.pdf, types.doc, types.docx, types.plainText, types.images, types.allFiles],
+        allowMultiSelection: true,
+      });
+      if (result && result.length > 0) {
+        setMaterials((prev) => [
+          ...prev,
+          ...result.map((file) => ({
+            uri: file.uri || '',
+            type: file.type || 'application/octet-stream',
+            name: file.name || 'material',
+          })),
+        ]);
+      }
+    } catch (error) {
+      // User cancelled the picker - not an error worth surfacing.
+    }
+  };
+
+  const removeMaterial = (index: number) => {
+    setMaterials((prev) => prev.filter((_, i) => i !== index));
+  };
 
   useEffect(() => {
     if (assignment) {
@@ -515,13 +542,30 @@ const CreateAssignmentModal: React.FC<CreateAssignmentModalProps> = ({
     setSubmissionType('file');
     setStatus('draft');
     setErrors({});
+    setMaterials([]);
   };
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => 
-      assignment 
-        ? tutorService.updateAssignment(assignment.id, data)
-        : tutorService.createAssignment(data),
+    mutationFn: (data: any) => {
+      // Editing doesn't support attaching materials from this modal (only creation
+      // does) - keep the existing plain-JSON path for updates unchanged.
+      if (assignment) {
+        return tutorService.updateAssignment(assignment.id, data);
+      }
+      if (materials.length === 0) {
+        return tutorService.createAssignment(data);
+      }
+      const formData = new FormData();
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          formData.append(key, String(value));
+        }
+      });
+      materials.forEach((file) => {
+        formData.append('materials[]', file as any);
+      });
+      return tutorService.createAssignment(formData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tutorAssignments'] });
       queryClient.invalidateQueries({ queryKey: ['tutorDashboard'] });
@@ -801,6 +845,25 @@ const CreateAssignmentModal: React.FC<CreateAssignmentModalProps> = ({
                   Archived
                 </Text>
               </TouchableOpacity>
+            </View>
+          )}
+
+          {!assignment && (
+            <View style={styles.materialsSection}>
+              <Text style={styles.inputLabel}>Materials (optional)</Text>
+              <TouchableOpacity style={styles.pickMaterialsButton} onPress={handlePickMaterials}>
+                <Icon name="upload" size={18} color={colors.primary} />
+                <Text style={styles.pickMaterialsText}>Attach files for students</Text>
+              </TouchableOpacity>
+              {materials.map((file, index) => (
+                <View key={`${file.name}-${index}`} style={styles.materialRow}>
+                  <Icon name="file" size={16} color={colors.textSecondary} />
+                  <Text style={styles.materialName} numberOfLines={1}>{file.name}</Text>
+                  <TouchableOpacity onPress={() => removeMaterial(index)}>
+                    <Icon name="x" size={16} color={colors.error} />
+                  </TouchableOpacity>
+                </View>
+              ))}
             </View>
           )}
 
@@ -1258,6 +1321,35 @@ const styles = StyleSheet.create({
   },
   halfInput: {
     flex: 1,
+  },
+  materialsSection: {
+    marginTop: spacing.md,
+  },
+  pickMaterialsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginTop: spacing.xs,
+  },
+  pickMaterialsText: {
+    fontSize: 14,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  materialRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  materialName: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.text,
   },
   formActions: {
     flexDirection: 'row',

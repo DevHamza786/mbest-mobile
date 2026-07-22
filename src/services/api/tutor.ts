@@ -562,17 +562,24 @@ export const tutorService = {
     return response.data;
   },
 
-  createAssignment: async (data: {
-    title: string;
-    description?: string;
-    instructions?: string;
-    class_id: number;
-    due_date: string;
-    max_points?: number;
-    submission_type?: string;
-    status?: string;
-  }): Promise<ApiResponse<Assignment>> => {
-    const response = await apiClient.post<ApiResponse<Assignment>>('/tutor/assignments', data);
+  createAssignment: async (
+    data: {
+      title: string;
+      description?: string;
+      instructions?: string;
+      class_id: number;
+      due_date: string;
+      max_points?: number;
+      submission_type?: string;
+      status?: string;
+    } | FormData
+  ): Promise<ApiResponse<Assignment>> => {
+    const isFormData = data instanceof FormData;
+    const response = await apiClient.post<ApiResponse<Assignment>>(
+      '/tutor/assignments',
+      data,
+      isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined
+    );
     return response.data;
   },
 
