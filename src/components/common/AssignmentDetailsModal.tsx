@@ -295,7 +295,7 @@ export const AssignmentDetailsModal: React.FC<AssignmentDetailsModalProps> = ({
               <View style={styles.submissionActions}>
                 {onEditSubmission && (
                   <Button
-                    title="Edit Submission"
+                    title="Edit"
                     onPress={onEditSubmission}
                     variant="primary"
                     style={styles.editSubmissionButton}
