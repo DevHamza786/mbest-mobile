@@ -99,16 +99,14 @@ export const TutorAssignmentsScreen: React.FC = () => {
     const total = assignments.length;
     const published = assignments.filter((a) => a.status?.toLowerCase() === 'published').length;
     const drafts = assignments.filter((a) => a.status?.toLowerCase() === 'draft').length;
-    
-    // Pending grading: assignments with submissions that need grading
-    const pendingGrading = assignments.reduce((count, a) => {
-      const submitted = parseInt(String(a.submitted_count || a.submissions_count || 0));
-      const total = parseInt(String(a.total_students || a.total_submissions || 0));
-      return count + (submitted > 0 ? submitted : 0);
-    }, 0);
+
+    // Pending grading count comes from the backend, which counts submissions
+    // still awaiting grading (not just "submitted") across all assignments,
+    // not only the ones loaded on the current page.
+    const pendingGrading = (data as any)?.data?.statistics?.pending_grading ?? 0;
 
     return { total, published, drafts, pendingGrading };
-  }, [assignments]);
+  }, [assignments, data]);
 
   // Filter assignments
   const filteredAssignments = useMemo(() => {
