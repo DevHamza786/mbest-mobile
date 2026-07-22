@@ -335,6 +335,11 @@ export interface Hours {
   this_month: number;
   this_week: number;
   sessions_count: number;
+  total_earnings?: number;
+  paid_hours?: number;
+  paid_earnings?: number;
+  pending_hours?: number;
+  pending_earnings?: number;
 }
 
 export interface Resource {
@@ -645,8 +650,10 @@ export const tutorService = {
   },
 
   // Hours
-  getHours: async (params?: { date_from?: string; date_to?: string }): Promise<ApiResponse<Hours>> => {
-    const response = await apiClient.get<ApiResponse<Hours>>('/tutor/hours', { params });
+  getHours: async (
+    params?: { date_from?: string; date_to?: string }
+  ): Promise<ApiResponse<Session[]> & { summary: Hours }> => {
+    const response = await apiClient.get<ApiResponse<Session[]> & { summary: Hours }>('/tutor/hours', { params });
     return response.data;
   },
 

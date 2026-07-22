@@ -16,7 +16,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
-import { tutorService } from '../../services/api/tutor';
+import { tutorService, type Class } from '../../services/api/tutor';
 import { useAuthStore } from '../../store/authStore';
 import { colors } from '../../constants/colors';
 import { spacing } from '../../constants/spacing';
@@ -53,7 +53,12 @@ export const TutorClassesScreen: React.FC = () => {
     );
   }
 
-  const classes = data?.data || [];
+  // Backend paginates this endpoint, so `data.data` is a paginator object
+  // ({ data: [...], current_page, ... }), not a flat array - unwrap it defensively
+  // since some other tutor endpoints (and older cached responses) return a flat array.
+  const classes: Class[] = Array.isArray(data?.data)
+    ? data.data
+    : (data?.data as unknown as { data: Class[] } | undefined)?.data ?? [];
 
   return (
     <View style={styles.container}>

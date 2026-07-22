@@ -54,7 +54,9 @@ export const TutorHoursScreen: React.FC = () => {
     );
   }
 
-  const hours = data?.data;
+  // The stat totals live in the `summary` sibling key, not `data` (which is the
+  // paginated list of individual completed sessions).
+  const hours = (data as any)?.summary;
 
   return (
     <View style={styles.container}>

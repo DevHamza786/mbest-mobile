@@ -92,9 +92,14 @@ export const TutorAttendanceScreen: React.FC = () => {
     );
   }
 
-  // Safely get records array
-  const records = Array.isArray(data?.data) ? data.data : [];
-  const classes = Array.isArray(classesData?.data) ? classesData.data : [];
+  // Safely get records array - both endpoints paginate, so `data.data` is a
+  // paginator object ({ data: [...], current_page, ... }), not a flat array.
+  function unwrapPaginated<T>(raw: T[] | { data: T[] } | undefined): T[] {
+    if (Array.isArray(raw)) return raw;
+    return raw?.data ?? [];
+  }
+  const records = unwrapPaginated(data?.data);
+  const classes = unwrapPaginated(classesData?.data);
 
   // Calculate summary statistics
   const totalRecords = records.length;
