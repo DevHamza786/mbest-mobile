@@ -15,7 +15,7 @@ import {
   TextInput,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { tutorService } from '../../services/api/tutor';
+import { tutorService, type Question } from '../../services/api/tutor';
 import { useAuthStore } from '../../store/authStore';
 import { colors } from '../../constants/colors';
 import { spacing } from '../../constants/spacing';
@@ -90,7 +90,11 @@ export const TutorQuestionsScreen: React.FC = () => {
     );
   }
 
-  const questions = data?.data || [];
+  // Backend paginates this endpoint, so data.data is a paginator object
+  // ({ data: [...], current_page, ... }), not a flat array.
+  const questions: Question[] = Array.isArray(data?.data)
+    ? data.data
+    : (data?.data as unknown as { data: Question[] } | undefined)?.data ?? [];
 
   return (
     <View style={styles.container}>

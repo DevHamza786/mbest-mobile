@@ -81,6 +81,12 @@ const MENU_SECTIONS: MenuSection[] = [
         icon: 'book',
         screen: 'TutorResources',
       },
+      {
+        id: 'questions',
+        title: 'Questions',
+        icon: 'inbox',
+        screen: 'TutorQuestions',
+      },
     ],
   },
   {
