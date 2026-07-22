@@ -235,7 +235,11 @@ export const AddLessonScreen: React.FC = () => {
     const end_time = formatTimeForApi(endH, endM);
 
     const sessionType = selectedStudentIds.length > 1 ? 'group' : '1:1';
-    const locationValue = LOCATION_OPTIONS.find((o) => o.value === location)?.value || 'online';
+    const selectedOption = LOCATION_OPTIONS.find((o) => o.value === location) ?? LOCATION_OPTIONS[0];
+    // Backend only accepts location_type: 'online'|'onsite' (+ a free-text location_detail);
+    // the legacy `location` enum ('online'|'centre'|'home') doesn't have a value for this
+    // dropdown's "Student's Home" option, which is why that option used to 422.
+    const locationType: 'online' | 'onsite' = selectedOption.value === 'online' ? 'online' : 'onsite';
 
     const data: Parameters<typeof tutorService.createSession>[0] = {
       date: apiDate,
@@ -243,7 +247,8 @@ export const AddLessonScreen: React.FC = () => {
       end_time,
       student_ids: selectedStudentIds,
       subject: subject.trim(),
-      location: locationValue,
+      location_type: locationType,
+      location_detail: locationType === 'onsite' ? selectedOption.label : undefined,
       session_type: sessionType,
     };
     if (yearLevel.trim()) data.year_level = yearLevel.trim();

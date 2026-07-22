@@ -512,7 +512,8 @@ export const tutorService = {
     end_time: string;
     subject: string;
     year_level?: string;
-    location: string;
+    location_type: 'online' | 'onsite';
+    location_detail?: string;
     session_type: string;
     student_ids?: number[];
     class_id?: number;
