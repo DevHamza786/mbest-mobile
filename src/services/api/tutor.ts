@@ -533,6 +533,15 @@ export const tutorService = {
     return response.data;
   },
 
+  proposeReschedule: async (id: number, data: {
+    proposed_date: string;
+    proposed_start_time: string;
+    proposed_end_time: string;
+  }): Promise<ApiResponse<Session>> => {
+    const response = await apiClient.post<ApiResponse<Session>>(`/tutor/sessions/${id}/propose-reschedule`, data);
+    return response.data;
+  },
+
   deleteSession: async (id: number): Promise<ApiResponse<void>> => {
     const response = await apiClient.delete<ApiResponse<void>>(`/tutor/sessions/${id}`);
     return response.data;

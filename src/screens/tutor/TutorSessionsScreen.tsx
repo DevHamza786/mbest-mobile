@@ -13,6 +13,8 @@ import {
   RefreshControl,
   Alert,
   Dimensions,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
@@ -127,6 +129,50 @@ export const TutorSessionsScreen: React.FC = () => {
     },
   });
 
+  const proposeRescheduleMutation = useMutation({
+    mutationFn: (vars: { id: number; proposed_date: string; proposed_start_time: string; proposed_end_time: string }) =>
+      tutorService.proposeReschedule(vars.id, {
+        proposed_date: vars.proposed_date,
+        proposed_start_time: vars.proposed_start_time,
+        proposed_end_time: vars.proposed_end_time,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tutorSessions'] });
+      queryClient.invalidateQueries({ queryKey: ['tutorDashboard'] });
+      Alert.alert('Success', 'New time proposed. Awaiting approval.');
+    },
+    onError: (error: any) => {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to propose new time');
+    },
+  });
+
+  const [unavailableSession, setUnavailableSession] = useState<Session | null>(null);
+  const [proposedDate, setProposedDate] = useState('');
+  const [proposedStartTime, setProposedStartTime] = useState('');
+  const [proposedEndTime, setProposedEndTime] = useState('');
+
+  const closeUnavailableModal = () => {
+    setUnavailableSession(null);
+    setProposedDate('');
+    setProposedStartTime('');
+    setProposedEndTime('');
+  };
+
+  const confirmUnavailable = () => {
+    if (!unavailableSession) return;
+    if (proposedDate.trim() && proposedStartTime.trim() && proposedEndTime.trim()) {
+      proposeRescheduleMutation.mutate({
+        id: unavailableSession.id,
+        proposed_date: proposedDate.trim(),
+        proposed_start_time: proposedStartTime.trim(),
+        proposed_end_time: proposedEndTime.trim(),
+      });
+    } else {
+      unavailableMutation.mutate(unavailableSession.id);
+    }
+    closeUnavailableModal();
+  };
+
   const handleDelete = (session: Session) => {
     Alert.alert(
       'Delete Session',
@@ -151,17 +197,7 @@ export const TutorSessionsScreen: React.FC = () => {
   };
 
   const handleUnavailable = (session: Session) => {
-    Alert.alert(
-      'Mark as Unavailable',
-      'Are you sure you want to mark this session as unavailable?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Mark Unavailable',
-          onPress: () => unavailableMutation.mutate(session.id),
-        },
-      ]
-    );
+    setUnavailableSession(session);
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -511,6 +547,53 @@ export const TutorSessionsScreen: React.FC = () => {
         </View>
       </ScrollView>
 
+      <Modal
+        visible={!!unavailableSession}
+        transparent
+        animationType="fade"
+        onRequestClose={closeUnavailableModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Mark as Unavailable</Text>
+            <Text style={styles.modalSubtitle}>
+              Propose a new time below, or leave blank to only mark this session unavailable.
+            </Text>
+            <Text style={styles.modalLabel}>Proposed Date</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={colors.textTertiary}
+              value={proposedDate}
+              onChangeText={setProposedDate}
+            />
+            <Text style={styles.modalLabel}>Start Time</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="HH:MM"
+              placeholderTextColor={colors.textTertiary}
+              value={proposedStartTime}
+              onChangeText={setProposedStartTime}
+            />
+            <Text style={styles.modalLabel}>End Time</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="HH:MM"
+              placeholderTextColor={colors.textTertiary}
+              value={proposedEndTime}
+              onChangeText={setProposedEndTime}
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalCancelButton} onPress={closeUnavailableModal}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalConfirmButton} onPress={confirmUnavailable}>
+                <Text style={styles.modalConfirmText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -884,5 +967,71 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: spacing.md,
     includeFontPadding: false,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  modalCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    ...shadows.md,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+  },
+  modalLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+    color: colors.text,
+    fontSize: 14,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  modalCancelButton: {
+    flex: 1,
+    padding: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    color: colors.text,
+    fontWeight: '600',
+  },
+  modalConfirmButton: {
+    flex: 1,
+    padding: spacing.sm,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.success,
+    alignItems: 'center',
+  },
+  modalConfirmText: {
+    color: colors.textInverse,
+    fontWeight: '600',
   },
 });
