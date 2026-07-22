@@ -21,6 +21,21 @@ import type { NavigationProp } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { pick, types } from '@react-native-documents/picker';
 import { tutorService, type Resource, type ResourceRequest } from '../../services/api/tutor';
+import { getFileExtension } from '../../utils/fileDownload';
+
+const EXTENSION_MIME_TYPES: Record<string, string> = {
+  pdf: 'application/pdf',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  ppt: 'application/vnd.ms-powerpoint',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  xls: 'application/vnd.ms-excel',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  txt: 'text/plain',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+};
 import { useAuthStore } from '../../store/authStore';
 import { colors } from '../../constants/colors';
 import { spacing, borderRadius, shadows } from '../../constants/spacing';
@@ -165,11 +180,12 @@ export const TutorResourcesScreen: React.FC = () => {
     );
   };
 
-  const handleDownloadResource = async (resourceId: number, resourceTitle: string) => {
+  const handleDownloadResource = async (resource: Resource) => {
+    const { id: resourceId, title: resourceTitle } = resource;
     try {
       const ReactNativeBlobUtil = require('react-native-blob-util').default;
       const { PermissionsAndroid, Platform } = require('react-native');
-      
+
       // Request notification permission for Android 13+
       if (Platform.OS === 'android' && Platform.Version >= 33) {
         const granted = await PermissionsAndroid.request(
@@ -179,15 +195,20 @@ export const TutorResourcesScreen: React.FC = () => {
           Alert.alert('Permission Required', 'Notification permission is needed to show download progress.');
         }
       }
-      
+
       const downloadUrl = `https://engine-rebuild.co.uk/mbest/public/api/v1/resources/${resourceId}/download?token=${token}`;
+      // Resources aren't always PDFs - derive the real extension/MIME from the
+      // stored file so the OS knows how to name and open the downloaded file.
+      const extension = resource.file_url ? getFileExtension(resource.file_url) : '';
+      const mimeType = EXTENSION_MIME_TYPES[extension] || 'application/octet-stream';
       const timestamp = Date.now();
-      const fileName = `${resourceTitle.replace(/[^a-z0-9 ]/gi, '_')}_${timestamp}.pdf`;
-      
+      const safeExtension = extension || 'pdf';
+      const fileName = `${resourceTitle.replace(/[^a-z0-9 ]/gi, '_')}_${timestamp}.${safeExtension}`;
+
       const { config, fs, android } = ReactNativeBlobUtil;
       const downloads = fs.dirs.DownloadDir;
       const filePath = `${downloads}/${fileName}`;
-      
+
       config({
         fileCache: true,
         addAndroidDownloads: {
@@ -196,7 +217,7 @@ export const TutorResourcesScreen: React.FC = () => {
           path: filePath,
           description: 'Downloading resource',
           title: resourceTitle,
-          mime: 'application/pdf',
+          mime: mimeType,
           mediaScannable: true,
         },
       })
@@ -210,33 +231,37 @@ export const TutorResourcesScreen: React.FC = () => {
       .then((res: any) => {
         const downloadedPath = res.path();
         console.log('Downloaded to:', downloadedPath);
-        
-        // Show success with open file option
+
+        // Show success with open file option (Android's download-manager intent
+        // isn't available on iOS - just confirm the save there instead of
+        // crashing on an undefined `android` namespace).
+        const buttons =
+          Platform.OS === 'android'
+            ? [
+                { text: 'OK', style: 'cancel' as const },
+                {
+                  text: 'Open File',
+                  onPress: () => {
+                    android.actionViewIntent(downloadedPath, mimeType);
+                  },
+                },
+              ]
+            : [{ text: 'OK', style: 'cancel' as const }];
+
         Alert.alert(
           'Download Complete!',
           `${resourceTitle}\n\nSaved in Downloads folder`,
-          [
-            {
-              text: 'OK',
-              style: 'cancel'
-            },
-            {
-              text: 'Open File',
-              onPress: () => {
-                android.actionViewIntent(downloadedPath, 'application/pdf');
-              }
-            }
-          ]
+          buttons
         );
       })
       .catch((error: any) => {
         console.error('Download error:', error);
         Alert.alert(
-          'Download Failed', 
+          'Download Failed',
           'Could not download file. Please try again.'
         );
       });
-      
+
     } catch (error) {
       console.error('Download error:', error);
       Alert.alert('Error', 'Failed to start download.');
@@ -498,7 +523,7 @@ export const TutorResourcesScreen: React.FC = () => {
                   </Text>
                   <TouchableOpacity 
                     style={styles.downloadButton}
-                    onPress={() => handleDownloadResource(resource.id, resource.title)}
+                    onPress={() => handleDownloadResource(resource)}
                   >
                     <Icon name="download" size={16} color={colors.textInverse} />
                   </TouchableOpacity>

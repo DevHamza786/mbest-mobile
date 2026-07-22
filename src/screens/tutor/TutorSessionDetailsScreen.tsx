@@ -199,7 +199,12 @@ export const TutorSessionDetailsScreen: React.FC = () => {
           <View style={styles.notesHeader}>
             <Text style={styles.sectionTitle}>Lesson Notes</Text>
             {!showNotesInput && (
-              <TouchableOpacity onPress={() => setShowNotesInput(true)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setNotes(session?.notes || '');
+                  setShowNotesInput(true);
+                }}
+              >
                 <Icon name="edit" size={20} color={colors.primary} />
               </TouchableOpacity>
             )}
