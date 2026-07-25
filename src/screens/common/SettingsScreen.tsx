@@ -16,10 +16,36 @@ import { colors } from '../../constants/colors';
 import { spacing } from '../../constants/spacing';
 import { Card } from '../../components/common/Card';
 
+import { Alert, LinkedState } from 'react-native';
+
 export const SettingsScreen: React.FC = () => {
   const [pushNotifications, setPushNotifications] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
+
+  const showPrivacyPolicy = () => {
+    Alert.alert(
+      'Privacy Policy & EULA',
+      'MBEST LMS collects email, phone, and profile details strictly for educational administration and tutoring session management.\n\nEULA Terms: Users are granted a personal non-transferable license to access course materials. Redistribution or recording of content is strictly prohibited.',
+      [{ text: 'Close' }]
+    );
+  };
+
+  const showTerms = () => {
+    Alert.alert(
+      'Terms & Conditions',
+      '1. Users must provide accurate account information.\n2. Cancellations require 24 hours notice.\n3. Outstanding invoices may result in temporary access suspension.',
+      [{ text: 'Close' }]
+    );
+  };
+
+  const showSupport = () => {
+    Alert.alert(
+      'Help & Support',
+      'Email: support@mbest.edu.au\nPhone: +61 1300 000 123\nHours: Mon-Fri 9:00 AM - 6:00 PM AEST',
+      [{ text: 'Close' }]
+    );
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -60,19 +86,23 @@ export const SettingsScreen: React.FC = () => {
         </View>
       </Card>
 
-      {/* About Section */}
+      {/* About & Legal Section */}
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>About</Text>
+        <Text style={styles.sectionTitle}>About & Support</Text>
         <View style={styles.aboutRow}>
           <Text style={styles.aboutLabel}>App Version</Text>
           <Text style={styles.aboutValue}>1.0.0</Text>
         </View>
-        <TouchableOpacity style={styles.linkRow}>
+        <TouchableOpacity style={styles.linkRow} onPress={showSupport}>
+          <Text style={styles.linkText}>Help & Support</Text>
+          <Text style={styles.linkArrow}>›</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.linkRow} onPress={showTerms}>
           <Text style={styles.linkText}>Terms & Conditions</Text>
           <Text style={styles.linkArrow}>›</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.linkRow}>
-          <Text style={styles.linkText}>Privacy Policy</Text>
+        <TouchableOpacity style={styles.linkRow} onPress={showPrivacyPolicy}>
+          <Text style={styles.linkText}>Privacy Policy & EULA</Text>
           <Text style={styles.linkArrow}>›</Text>
         </TouchableOpacity>
       </Card>

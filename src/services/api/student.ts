@@ -302,6 +302,21 @@ export const studentService = {
     return response.data;
   },
 
+  joinClassByCode: async (classCode: string): Promise<ApiResponse<any>> => {
+    const response = await apiClient.post<ApiResponse<any>>(
+      '/student/classes/join',
+      { class_code: classCode },
+    );
+    return response.data;
+  },
+
+  getAvailableClasses: async (): Promise<ApiResponse<any>> => {
+    const response = await apiClient.get<ApiResponse<any>>(
+      '/student/classes/available',
+    );
+    return response.data;
+  },
+
   // Assignments
   getAssignments: async (): Promise<ApiResponse<Assignment[]>> => {
     const response = await apiClient.get<ApiResponse<Assignment[]>>(

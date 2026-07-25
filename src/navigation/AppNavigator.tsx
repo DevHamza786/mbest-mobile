@@ -377,13 +377,24 @@ const StudentTabsNavigator = () => {
         }}
       />
       <StudentTab.Screen
-        name="StudentAttendance"
-        component={StudentAttendanceScreen}
+        name="Messages"
+        component={MessagesScreen}
         options={{
-          title: 'Attendance',
-          tabBarLabel: 'Attendance',
+          title: 'Messages',
+          tabBarLabel: 'Chat',
           tabBarIcon: ({ color, size }) => (
-            <Icon name="check-circle" size={size || 20} color={color} />
+            <Icon name="message-circle" size={size || 20} color={color} />
+          ),
+        }}
+      />
+      <StudentTab.Screen
+        name="StudentResources"
+        component={TutorResourcesScreen}
+        options={{
+          title: 'Library',
+          tabBarLabel: 'Library',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="folder" size={size || 20} color={color} />
           ),
         }}
       />

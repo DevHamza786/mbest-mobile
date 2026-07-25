@@ -108,6 +108,7 @@ export const AddLessonScreen: React.FC = () => {
   const [startTimeInput, setStartTimeInput] = useState('');
   const [durationHours, setDurationHours] = useState(1);
   const [location, setLocation] = useState('online');
+  const [locationDetail, setLocationDetail] = useState('');
   const [yearLevel, setYearLevel] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -248,7 +249,7 @@ export const AddLessonScreen: React.FC = () => {
       student_ids: selectedStudentIds,
       subject: subject.trim(),
       location_type: locationType,
-      location_detail: locationType === 'onsite' ? selectedOption.label : undefined,
+      location_detail: locationDetail.trim() || (locationType === 'onsite' ? selectedOption.label : undefined),
       session_type: sessionType,
     };
     if (yearLevel.trim()) data.year_level = yearLevel.trim();
@@ -474,6 +475,13 @@ export const AddLessonScreen: React.FC = () => {
             </View>
           )}
         </View>
+
+        <Input
+          label={location === 'online' ? 'Meeting Link (Optional)' : 'Room / Address / Maps Link (Optional)'}
+          placeholder={location === 'online' ? 'https://zoom.us/j/...' : 'e.g. Room 2B or 123 Main St'}
+          value={locationDetail}
+          onChangeText={setLocationDetail}
+        />
 
         <Input
           label="Year Level (Optional)"
